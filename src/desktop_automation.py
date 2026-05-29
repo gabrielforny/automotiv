@@ -157,10 +157,10 @@ class AutomotivApp:
         self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
         time.sleep(1)
 
-    def search_material(self, code_or_reference: str, inactive: bool = False) -> bool:
-        return self.find_material(code_or_reference=code_or_reference, inactive=inactive) is not None
+    def search_material(self, code_or_reference: str) -> bool:
+        return self.find_material(code_or_reference=code_or_reference) is not None
 
-    def find_material(self, code_or_reference: str, inactive: bool = False) -> dict[str, Any] | None:
+    def find_material(self, code_or_reference: str) -> dict[str, Any] | None:
         """Pesquisa material e valida o código exato via Excel exportado da grid."""
         self.press_search_f5()
         self._select_search_by_code_internal()

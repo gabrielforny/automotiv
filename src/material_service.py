@@ -40,11 +40,7 @@ class MaterialService:
                 item.quantity,
             )
 
-            material = self.app.find_material(item.code_or_reference, inactive=False)
-
-            if not material and self.app.config.search.try_inactive_when_not_found:
-                self.logger.info("Não encontrou em Ativo/Todos. Tentando Inativo: %s", item.code_or_reference)
-                material = self.app.find_material(item.code_or_reference, inactive=True)
+            material = self.app.find_material(item.code_or_reference)
 
             if material:
                 results.append(
