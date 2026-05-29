@@ -79,6 +79,7 @@ images:
   export_excel_button: "export_excel_button.png"
   btn_fechar_janela: "btn_fechar_janela.png"
   btn_fechar_aba: "btn_fechar_aba.png"
+  btn_sair_grv: "btn_sair_grv.png"
 
   message_modal: "modal_mensagem.png"
   message_modal_ok_button: "modal_mensagem_ok.png"
