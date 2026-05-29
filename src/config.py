@@ -100,7 +100,7 @@ class ImagesConfig(BaseModel):
 
 
 class ExportConfig(BaseModel):
-    download_dir: str = "C:/Users/User/Documents/robo-automotiv/data/exportados"
+    download_dir: str = "C:/Users/User/Documents/automotiv/data/exportados"
     exported_file_prefix: str = "automotiv_material"
     wait_timeout_seconds: int = 90
 

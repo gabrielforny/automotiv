@@ -6,7 +6,7 @@ app:
   wait_after_open_screen_seconds: 5
 
 excel:
-  default_path: "C:/Users/User/Documents/robo-automotiv/SOLICITAÇÃO DE ORÇAMENTO (1).xlsx"
+  default_path: "C:/Users/User/Documents/automotiv/SOLICITAÇÃO DE ORÇAMENTO (1).xlsx"
   header_row: 7
   first_data_row: 8
   columns:
@@ -35,7 +35,7 @@ paths:
   pdf_dir: "data/pdfs"
 
 export:
-  download_dir: "C:/Users/User/Documents/robo-automotiv/data/exportados"
+  download_dir: "C:/Users/User/Documents/automotiv/data/exportados"
   exported_file_prefix: "automotiv_material"
   wait_timeout_seconds: 90
 
