@@ -69,7 +69,8 @@ class ImagesConfig(BaseModel):
     btn_fechar_janela: str = "btn_fechar_janela.png"
     btn_fechar_aba: str = "btn_fechar_aba.png"
     btn_sair_grv: str = "btn_sair_grv.png"
-
+    btn_sair_do_sistema: str = "btn_sair_do_sistema.png"
+    
     message_modal: str = "modal_mensagem.png"
     message_modal_ok_button: str = "modal_mensagem_ok.png"
     modal_duplicado: str = "modal_duplicado.png"

@@ -512,6 +512,8 @@ class AutomotivApp:
         self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
         time.sleep(3)
         self._click_configured_image_or_fail("btn_sair_grv", timeout=10)
+        time.sleep(1)
+        self._click_configured_image_or_fail("btn_sair_do_sistema", timeout=10)
         time.sleep(3)
         self.app = None
 
