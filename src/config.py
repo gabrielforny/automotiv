@@ -67,6 +67,7 @@ class ImagesConfig(BaseModel):
 
     export_excel_button: str = "export_excel_button.png"
     btn_fechar_janela: str = "btn_fechar_janela.png"
+    btn_fechar_aba: str = "btn_fechar_aba.png"
 
     message_modal: str = "modal_mensagem.png"
     message_modal_ok_button: str = "modal_mensagem_ok.png"

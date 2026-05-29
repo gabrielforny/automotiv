@@ -150,10 +150,11 @@ class AutomotivApp:
         self.logger.info("Fechando tela atual.")
         if self.config.runtime.dry_run:
             return
-        if self._get_image_name("btn_fechar_janela"):
-            self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
-        else:
-            keyboard.send_keys("{F10}")
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        time.sleep(1)
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        time.sleep(1)
+        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
         time.sleep(1)
 
     def search_material(self, code_or_reference: str, inactive: bool = False) -> bool:
