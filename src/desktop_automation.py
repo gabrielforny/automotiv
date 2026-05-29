@@ -162,15 +162,10 @@ class AutomotivApp:
 
     def find_material(self, code_or_reference: str, inactive: bool = False) -> dict[str, Any] | None:
         """Pesquisa material e valida o código exato via Excel exportado da grid."""
-        status = "Inativo" if inactive else "Ativo/Todos"
-        self.logger.info("Pesquisando material '%s' em status %s.", code_or_reference, status)
-        if self.config.runtime.dry_run:
-            return None
-
         self.press_search_f5()
         self._select_search_by_code_internal()
         time.sleep(1)
-        self._set_material_status(inactive=inactive)
+        self._set_material_status()
         self._type_search_text(code_or_reference)
         time.sleep(2)
 
@@ -193,18 +188,8 @@ class AutomotivApp:
         keyboard.send_keys("{HOME}")
         keyboard.send_keys("{ENTER}")
 
-    def _set_material_status(self, inactive: bool) -> None:
-        image_key = "radio_inativo" if inactive else "radio_todos"
-        if self._get_image_name(image_key):
-            try:
-                self._click_configured_image_or_fail(image_key, timeout=4, confidence=0.75)
-                return
-            except Exception as exc:
-                self.logger.info("Não consegui selecionar status por imagem (%s): %s", image_key, exc)
-        if inactive:
-            keyboard.send_keys("{TAB}{TAB}{DOWN}{DOWN}")
-        else:
-            keyboard.send_keys("{TAB}{TAB}{DOWN}{DOWN}")
+    def _set_material_status(self) -> None:
+        keyboard.send_keys("{TAB}{TAB}{DOWN}{DOWN}")
         time.sleep(0.3)
 
     def _type_search_text(self, text: str) -> None:
