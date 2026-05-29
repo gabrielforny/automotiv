@@ -11,6 +11,7 @@ from src.history_manager import HistoryManager
 from src.logger import setup_logger
 from src.material_service import MaterialService
 from src.orcamento_service import OrcamentoService
+from src.site_search_service import SiteSearchService
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,7 +45,8 @@ def run_cli(args: argparse.Namespace) -> None:
     app.start()
     app.login()
 
-    material_service = MaterialService(app, logger)
+    site_service = SiteSearchService(config, logger)
+    material_service = MaterialService(app, site_service, logger)
     material_results = material_service.process_items(items)
 
     client_code = None

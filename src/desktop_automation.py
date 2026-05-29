@@ -499,6 +499,35 @@ class AutomotivApp:
             return None
 
     # ================================
+    # Controle do ciclo de vida da app
+    # ================================
+
+    def close_app(self) -> None:
+        """Fecha a janela do GRV para liberar o foco antes de abrir o navegador."""
+        self.logger.info("Fechando aplicação GRV.")
+        if self.config.runtime.dry_run:
+            return
+        try:
+            desktop = Desktop(backend="uia")
+            window = desktop.window(title_re=self.config.app.window_title_regex)
+            window.close()
+            time.sleep(2)
+        except Exception as exc:
+            self.logger.warning("Janela GRV não encontrada para fechar: %s. Tentando Alt+F4.", exc)
+            try:
+                keyboard.send_keys("%{F4}")
+                time.sleep(2)
+            except Exception:
+                pass
+        self.app = None
+
+    def reopen(self) -> None:
+        """Reabre e faz login no GRV após ter fechado para ir ao site."""
+        self.logger.info("Reabrindo aplicação GRV.")
+        self.start()
+        self.login()
+
+    # ================================
     # Utilitários
     # ================================
 

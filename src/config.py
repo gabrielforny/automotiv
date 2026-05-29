@@ -99,6 +99,16 @@ class ImagesConfig(BaseModel):
     carrier_pattern_tab: str = "carrier_pattern_tab.png"
     print_ok_button: str = "print_ok_button.png"
 
+    site_search_field: str = "site_search_field.png"
+    site_search_button: str = "site_search_button.png"
+    site_result_found: str = "site_result_found.png"
+    site_result_code_area: str = "site_result_code_area.png"
+
+
+class SiteSearchConfig(BaseModel):
+    wait_after_open_seconds: float = 3.0
+    wait_after_search_seconds: float = 2.0
+
 
 class ExportConfig(BaseModel):
     download_dir: str = "C:/Users/User/Documents/automotiv/data/exportados"
@@ -133,6 +143,7 @@ class BotConfig(BaseModel):
     export: ExportConfig = Field(default_factory=ExportConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
     workflow: WorkflowConfig = Field(default_factory=WorkflowConfig)
+    site_search: SiteSearchConfig = Field(default_factory=SiteSearchConfig)
 
 
 def load_config(path: str | Path = "config/config.yaml") -> BotConfig:

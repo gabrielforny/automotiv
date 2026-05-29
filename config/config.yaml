@@ -49,6 +49,10 @@ workflow:
   save_retry_attempts: 2
   generate_pdf: true
 
+site_search:
+  wait_after_open_seconds: 3
+  wait_after_search_seconds: 2
+
 images:
   assets_dir: "assets/images"
   confidence: 0.85
@@ -106,3 +110,9 @@ images:
   carrier_code_field: "carrier_code_field.png"
   carrier_pattern_tab: "carrier_pattern_tab.png"
   print_ok_button: "print_ok_button.png"
+
+  # Imagens do site automotivdobrasil.com.br — recortar quando for mapear o site
+  site_search_field: "site_search_field.png"
+  site_search_button: "site_search_button.png"
+  site_result_found: "site_result_found.png"
+  site_result_code_area: "site_result_code_area.png"

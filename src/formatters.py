@@ -28,3 +28,14 @@ def cpf_cnpj_search_variations(value: str) -> list[str]:
     if len(digits) == 14:
         return [format_cnpj(digits), digits]
     return [value.strip()]
+
+
+def code_search_variations(code: str) -> list[str]:
+    """Gera variações do código para busca no site (troca -, espaço e ponto entre si)."""
+    base = code.strip()
+    candidates = [base]
+    for src, replacements in [("-", [" ", ".", ""]), (" ", ["-", ".", ""]), (".", ["-", " ", ""])]:
+        if src in base:
+            for rep in replacements:
+                candidates.append(base.replace(src, rep))
+    return list(dict.fromkeys(candidates))
