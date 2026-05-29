@@ -509,7 +509,10 @@ class AutomotivApp:
         time.sleep(1)
         self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
         time.sleep(1)
-        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        try:
+            keyboard.send_keys("{F4}")
+        except Exception:
+            pyautogui.press("f4")
         time.sleep(3)
         self.app = None
 
