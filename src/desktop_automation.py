@@ -150,8 +150,8 @@ class AutomotivApp:
         self.logger.info("Fechando tela atual.")
         if self.config.runtime.dry_run:
             return
-        if self._get_image_name("close_button"):
-            self._click_configured_image_or_fail("close_button", timeout=10)
+        if self._get_image_name("btn_fechar_janela"):
+            self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
         else:
             keyboard.send_keys("{F10}")
         time.sleep(1)
