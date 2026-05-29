@@ -505,20 +505,12 @@ class AutomotivApp:
     def close_app(self) -> None:
         """Fecha a janela do GRV para liberar o foco antes de abrir o navegador."""
         self.logger.info("Fechando aplicação GRV.")
-        if self.config.runtime.dry_run:
-            return
-        try:
-            desktop = Desktop(backend="uia")
-            window = desktop.window(title_re=self.config.app.window_title_regex)
-            window.close()
-            time.sleep(2)
-        except Exception as exc:
-            self.logger.warning("Janela GRV não encontrada para fechar: %s. Tentando Alt+F4.", exc)
-            try:
-                keyboard.send_keys("%{F4}")
-                time.sleep(2)
-            except Exception:
-                pass
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        time.sleep(1)
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        time.sleep(1)
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        time.sleep(3)
         self.app = None
 
     def reopen(self) -> None:
