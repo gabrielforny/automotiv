@@ -1,0 +1,52 @@
+app:
+  shortcut_name: "MenuGRV3 - Atalho (3).lnk"
+  window_title_regex: ".*(CPS|GRV|AUTOMOTIV).*"
+  login_password: "123456"
+  wait_after_login_seconds: 15
+  wait_after_open_screen_seconds: 5
+
+excel:
+  default_path: "C:/Users/User/Documents/robo-automotiv/SOLICITAÇÃO DE ORÇAMENTO (1).xlsx"
+  header_row: 7
+  first_data_row: 8
+  columns:
+    code_or_reference: "CÓDIGO / REFERÊNCIA / PARTE NUMBER"
+    quantity: "QUANTIDADE"
+    item: "ITEM"
+
+search:
+  fallback_site: "https://www.automotivdobrasil.com.br"
+  active_first: true
+  try_inactive_when_not_found: true
+  min_grid_rows_to_consider_found: 1
+
+runtime:
+  dry_run: false
+  use_image_fallback: true
+  pause_between_actions_seconds: 0.5
+  log_level: "INFO"
+
+images:
+  assets_dir: "assets/images"
+  confidence: 0.85
+  input_senha: "input_senha.png"
+  input_nome_login: "input_nome_login.png"
+  login_button: "login_button.png"
+  menu_cadastro: "menu_cadastro.png"
+  menu_materiais: "menu_materiais.png"
+  menu_materiais_itens: "menu_materiais_itens.png"
+  search_button: "botao_pesquisar.png"
+  message_modal: "modal_mensagem.png"
+  message_modal_ok_button: "modal_mensagem_ok.png"
+  radio_inativo: "radio_inativo.png"
+  search_by_codigo_interno: "search_by_codigo_interno.png"
+  search_f5_button: "search_f5_button.png"
+  export_excel_button: "export_excel_button.png"
+  modal_duplicado: "modal_duplicado.png"
+  button_ok_duplicad: "button_ok_duplicad.png"
+  btn_fechar_janela: "btn_fechar_janela.png"
+  
+  export:
+    download_dir: "C:/Users/User/Downloads"
+    exported_file_prefix: "resulta-consulta-materias"
+    download_dir: "C:/Users/User/Documents/robo-automotiv/data/exportados"
