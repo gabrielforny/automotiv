@@ -26,27 +26,82 @@ runtime:
   pause_between_actions_seconds: 0.5
   log_level: "INFO"
 
+paths:
+  data_dir: "data"
+  pending_dir: "data/a_processar"
+  processed_dir: "data/processados"
+  history_dir: "data/historico"
+  export_dir: "data/exportados"
+  pdf_dir: "data/pdfs"
+
+export:
+  download_dir: "C:/Users/User/Documents/robo-automotiv/data/exportados"
+  exported_file_prefix: "automotiv_material"
+  wait_timeout_seconds: 90
+
+workflow:
+  # Deixe false enquanto ainda estiver validando só materiais/cliente.
+  # Quando as imagens do fluxo de orçamento estiverem prontas, mude para true.
+  enable_budget_flow: true
+  default_margin: ""
+  observation_placeholder: "-"
+  previous_orders_months_back: 12
+  save_retry_attempts: 2
+  generate_pdf: true
+
 images:
   assets_dir: "assets/images"
   confidence: 0.85
+
   input_senha: "input_senha.png"
   input_nome_login: "input_nome_login.png"
   login_button: "login_button.png"
+
   menu_cadastro: "menu_cadastro.png"
+  menu_cliente: "menu_cliente.png"
   menu_materiais: "menu_materiais.png"
   menu_materiais_itens: "menu_materiais_itens.png"
+  menu_orcamento: "menu_orcamento.png"
+  menu_orcamento_novo: "menu_orcamento_novo.png"
+  menu_orcamento_pesquisar: "menu_orcamento_pesquisar.png"
+  menu_imprimir: "menu_imprimir.png"
+  menu_imprimir_orcamento_padrao: "menu_imprimir_orcamento_padrao.png"
+
   search_button: "botao_pesquisar.png"
+  search_f5_button: "search_f5_button.png"
+  search_by_codigo_interno: "search_by_codigo_interno.png"
+  search_by_cnpj_cpf: "search_by_cnpj_cpf.png"
+
+  export_excel_button: "export_excel_button.png"
+  btn_fechar_janela: "btn_fechar_janela.png"
+
   message_modal: "modal_mensagem.png"
   message_modal_ok_button: "modal_mensagem_ok.png"
-  radio_inativo: "radio_inativo.png"
-  search_by_codigo_interno: "search_by_codigo_interno.png"
-  search_f5_button: "search_f5_button.png"
-  export_excel_button: "export_excel_button.png"
   modal_duplicado: "modal_duplicado.png"
   button_ok_duplicad: "button_ok_duplicad.png"
-  btn_fechar_janela: "btn_fechar_janela.png"
-  
-  export:
-    download_dir: "C:/Users/User/Downloads"
-    exported_file_prefix: "resulta-consulta-materias"
-    download_dir: "C:/Users/User/Documents/robo-automotiv/data/exportados"
+  save_error_modal_ok_button: "save_error_modal_ok_button.png"
+
+  radio_ativo: "radio_ativo.png"
+  radio_inativo: "radio_inativo.png"
+  radio_todos: "radio_todos.png"
+
+  # Estrutura do fluxo de orçamento. Recorte essas imagens conforme avançar no Windows real.
+  budget_blank_area: "budget_blank_area.png"
+  budget_quantity_field: "budget_quantity_field.png"
+  budget_margin_field: "budget_margin_field.png"
+  budget_add_next_line_area: "budget_add_next_line_area.png"
+  budget_tab_items: "budget_tab_items.png"
+  budget_tab_data: "budget_tab_data.png"
+  budget_tab_observation: "budget_tab_observation.png"
+  budget_order_number_field: "budget_order_number_field.png"
+  budget_observation_text_area: "budget_observation_text_area.png"
+  budget_save_f3_button: "budget_save_f3_button.png"
+
+  previous_orders_search_all_checkbox: "previous_orders_search_all_checkbox.png"
+  previous_orders_client_code_field: "previous_orders_client_code_field.png"
+  previous_orders_date_range_field: "previous_orders_date_range_field.png"
+  previous_order_open_button: "previous_order_open_button.png"
+
+  carrier_code_field: "carrier_code_field.png"
+  carrier_pattern_tab: "carrier_pattern_tab.png"
+  print_ok_button: "print_ok_button.png"

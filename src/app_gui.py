@@ -12,6 +12,8 @@ from src.desktop_automation import AutomotivApp
 from src.excel_reader import read_budget_items
 from src.logger import setup_logger
 from src.material_service import MaterialService
+from src.history_manager import HistoryManager
+from src.orcamento_service import OrcamentoService
 
 
 class QueueLogger:
@@ -122,7 +124,7 @@ class AutomotivBotGui(tk.Tk):
             messagebox.showinfo("Robô Automotiv", "O robô já está em execução.")
             return
 
-        excel = Path(self.excel_path.get().strip())
+        excel = self._resolve_excel_path()
         if not excel.exists():
             messagebox.showerror("Planilha não encontrada", f"Não encontrei a planilha:\n{excel}")
             return
@@ -142,7 +144,9 @@ class AutomotivBotGui(tk.Tk):
             logger = QueueLogger(self.log_queue, base_logger)
 
             excel_path = self._resolve_excel_path()
+            history = HistoryManager(config, logger)
             logger.info("Planilha usada: %s", excel_path)
+            history.copy_input_to_pending(excel_path)
 
             items = read_budget_items(excel_path, config.excel)
             logger.info("Itens lidos da planilha: %s", len(items))
@@ -154,14 +158,25 @@ class AutomotivBotGui(tk.Tk):
             app.login()
 
             material_service = MaterialService(app, logger)
-            material_service.process_items(items)
+            material_results = material_service.process_items(items)
 
+            client_code = None
             cliente = self.cliente.get().strip()
             if cliente:
                 cliente_service = ClienteService(app, logger)
                 client_code = cliente_service.find_client_code(cliente)
                 logger.info("Código do cliente retornado: %s", client_code)
 
+            budget_number = None
+            if config.workflow.enable_budget_flow:
+                orcamento_service = OrcamentoService(app, logger)
+                budget_number = orcamento_service.create_from_material_results(material_results, company_code=client_code)
+                logger.info("Orçamento retornado/gerado: %s", budget_number)
+            else:
+                logger.info("Fluxo de orçamento desabilitado em workflow.enable_budget_flow=false.")
+
+            history.write_history(items, material_results, client_code=client_code, budget_number=budget_number)
+            history.copy_input_to_processed(excel_path)
             logger.info("Execução finalizada.")
             self.log_queue.put("__DONE__")
         except Exception as exc:
