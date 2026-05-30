@@ -100,7 +100,7 @@ class AutomotivApp:
         self.logger.info("Abrindo Orçamento > Orçamento - F2/novo.")
         if self.config.runtime.dry_run:
             return
-        self._send_menu_sequence(["Orçamento", "Orçamento Novo"])
+        self._send_menu_sequence(["Orçamento", "Orçamento Submenu", "Orçamento Novo"])
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def open_previous_orders_search(self) -> None:
@@ -327,6 +327,9 @@ class AutomotivApp:
         self.logger.info("Iniciando criação de orçamento para empresa=%s | itens=%s", company_code, len(items))
         if self.config.runtime.dry_run:
             return None
+        
+        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        time.sleep(3)
 
         self.open_budget_new_screen()
         self._click_budget_blank_area()
@@ -618,6 +621,7 @@ class AutomotivApp:
             "materiais": "menu_materiais",
             "materiais_itens": "menu_materiais_itens",
             "orcamento": "menu_orcamento",
+            "orcamento_submenu": "menu_orcamento_submenu",
             "orcamento_novo": "menu_orcamento_novo",
             "orcamento_pesquisar": "menu_orcamento_pesquisar",
             "imprimir": "menu_imprimir",

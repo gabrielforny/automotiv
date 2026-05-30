@@ -66,8 +66,9 @@ images:
   menu_materiais: "menu_materiais.png"
   menu_materiais_itens: "menu_materiais_itens.png"
   menu_orcamento: "menu_orcamento.png"
-  menu_orcamento_novo: "menu_orcamento_novo.png"
+  menu_orcamento_submenu: "menu_orcamento_submenu.png"
   menu_orcamento_pesquisar: "menu_orcamento_pesquisar.png"
+  menu_orcamento_novo: "menu_orcamento_novo.png"
   menu_imprimir: "menu_imprimir.png"
   menu_imprimir_orcamento_padrao: "menu_imprimir_orcamento_padrao.png"
 

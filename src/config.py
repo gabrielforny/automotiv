@@ -55,8 +55,9 @@ class ImagesConfig(BaseModel):
     menu_materiais: str = "menu_materiais.png"
     menu_materiais_itens: str = "menu_materiais_itens.png"
     menu_orcamento: str = "menu_orcamento.png"
-    menu_orcamento_novo: str = "menu_orcamento_novo.png"
+    menu_orcamento_submenu: str = "menu_orcamento_submenu.png"
     menu_orcamento_pesquisar: str = "menu_orcamento_pesquisar.png"
+    menu_orcamento_novo: str = "menu_orcamento_novo.png"
     menu_imprimir: str = "menu_imprimir.png"
     menu_imprimir_orcamento_padrao: str = "menu_imprimir_orcamento_padrao.png"
 
