@@ -526,12 +526,8 @@ class AutomotivApp:
         return code
 
     def _select_search_by_cpf_cnpj(self) -> None:
-        if self._get_image_name("search_by_cnpj_cpf"):
-            self._click_configured_image_or_fail("search_by_cnpj_cpf", timeout=10)
-            return
+        self._click_configured_image_or_fail("search_by_cnpj_cpf", timeout=10)
         keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
-        keyboard.send_keys("{END}")
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
