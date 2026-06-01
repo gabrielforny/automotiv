@@ -519,6 +519,7 @@ class AutomotivApp:
             return None
         self.press_search_f5()
         self._select_search_by_cpf_cnpj()
+        self._set_material_status()  # Reutiliza o mesmo método para setar o status "Ativo" na pesquisa de clientes.
         self._type_search_text(cpf_or_cnpj)
         time.sleep(2)
         code = self._extract_first_client_code(cpf_or_cnpj)
@@ -527,10 +528,7 @@ class AutomotivApp:
 
     def _select_search_by_cpf_cnpj(self) -> None:
         self._click_configured_image_or_fail("search_by_cnpj_cpf", timeout=10)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
+        time.sleep(0.5)
 
     def _extract_first_client_code(self, cpf_or_cnpj: str) -> str | None:
         self.logger.info("Exportando grid de clientes para Excel.")
