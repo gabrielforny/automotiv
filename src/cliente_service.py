@@ -14,12 +14,16 @@ class ClienteService:
     def find_client_code(self, cpf_or_cnpj: str) -> str | None:
         self.app.open_clients_screen()
 
+        code = None
         for value in cpf_cnpj_search_variations(cpf_or_cnpj):
             self.logger.info("Tentando buscar cliente com: %s", value)
             code = self.app.search_client_and_get_code(value)
             if code:
                 self.logger.info("Cliente encontrado. Código: %s", code)
-                return code
+                break
 
-        self.logger.warning("Cliente não encontrado para CPF/CNPJ informado: %s", cpf_or_cnpj)
-        return None
+        if not code:
+            self.logger.warning("Cliente não encontrado para CPF/CNPJ informado: %s", cpf_or_cnpj)
+
+        self.app.close_current_screen()
+        return code

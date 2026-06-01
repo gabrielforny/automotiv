@@ -13,7 +13,6 @@ import pyperclip
 import yaml
 from openpyxl import load_workbook
 from pywinauto import Application, Desktop, keyboard
-from pywinauto.findwindows import ElementNotFoundError
 
 from src.config import BotConfig
 from src.image_automation import ImageAutomation
@@ -496,7 +495,9 @@ class AutomotivApp:
         self._select_search_by_cpf_cnpj()
         self._type_search_text(cpf_or_cnpj)
         time.sleep(2)
-        return self._extract_first_client_code()
+        code = self._extract_first_client_code(cpf_or_cnpj)
+        self._try_close_dialog()
+        return code
 
     def _select_search_by_cpf_cnpj(self) -> None:
         if self._get_image_name("search_by_cnpj_cpf"):
@@ -506,16 +507,36 @@ class AutomotivApp:
         keyboard.send_keys("{END}")
         keyboard.send_keys("{ENTER}")
 
-    def _extract_first_client_code(self) -> str | None:
+    def _extract_first_client_code(self, cpf_or_cnpj: str) -> str | None:
+        self.logger.info("Exportando grid de clientes para Excel.")
+        exported_file = self._export_grid_to_excel(cpf_or_cnpj)
         try:
-            desktop = Desktop(backend="uia")
-            window = desktop.window(title_re=self.config.app.window_title_regex)
-            texts = [t.strip() for t in window.texts() if t and t.strip()]
-            self.logger.debug("Textos capturados na tela de cliente: %s", texts)
-            # TODO: Quando a grid de cliente estiver definida, trocar por exportação Excel ou clipboard.
-            return None
-        except ElementNotFoundError:
-            return None
+            code = self._find_client_code_in_exported_excel(exported_file)
+            if code:
+                self.logger.info("Código do cliente extraído: %s", code)
+            else:
+                self.logger.info("Nenhum código de cliente encontrado no Excel exportado.")
+            return code
+        finally:
+            self._delete_file_safely(exported_file)
+
+    def _find_client_code_in_exported_excel(self, excel_path: Path) -> str | None:
+        workbook = load_workbook(excel_path, data_only=True)
+        sheet = workbook.active
+        headers = {str(cell.value or "").strip(): cell.column for cell in sheet[1] if cell.value}
+        code_col = headers.get("*Código") or headers.get("Código") or headers.get("*Codigo") or headers.get("Codigo")
+        if code_col is None:
+            raise RuntimeError(
+                f"Coluna '*Código' não encontrada no Excel de clientes exportado. "
+                f"Colunas disponíveis: {list(headers.keys())}"
+            )
+        for row in range(2, sheet.max_row + 1):
+            value = sheet.cell(row=row, column=code_col).value
+            if value is not None and str(value).strip():
+                workbook.close()
+                return str(value).strip()
+        workbook.close()
+        return None
 
     # ================================
     # Controle do ciclo de vida da app
