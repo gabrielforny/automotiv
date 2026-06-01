@@ -211,3 +211,31 @@ def unique_codes(items: Iterable[BudgetItem]) -> list[str]:
             seen.add(code)
             result.append(code)
     return result
+
+
+def read_cnpj_from_excel(excel_path: str | Path, config: ExcelConfig) -> str | None:
+    """Lê o CNPJ do requisitante da planilha.
+
+    Varre as linhas antes do cabeçalho dos itens procurando uma célula que
+    contenha 'CNPJ' (ex.: 'CNPJ DO REQUISITANTE') e retorna o valor da
+    célula imediatamente à direita.
+    """
+    path = Path(excel_path)
+    if not path.exists():
+        return None
+
+    workbook = load_workbook(path, data_only=True)
+    sheet = workbook.active
+
+    for row_idx in range(1, config.header_row):
+        for cell in sheet[row_idx]:
+            label = _normalize_header(cell.value)
+            if "CNPJ" in label:
+                # Pega a célula à direita da label
+                next_cell = sheet.cell(row=cell.row, column=cell.column + 1)
+                value = _to_clean_text(next_cell.value)
+                workbook.close()
+                return value if value else None
+
+    workbook.close()
+    return None

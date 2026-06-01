@@ -6,7 +6,7 @@ from pathlib import Path
 from src.cliente_service import ClienteService
 from src.config import load_config
 from src.desktop_automation import AutomotivApp
-from src.excel_reader import read_budget_items
+from src.excel_reader import read_budget_items, read_cnpj_from_excel
 from src.history_manager import HistoryManager
 from src.logger import setup_logger
 from src.material_service import MaterialService
@@ -41,6 +41,15 @@ def run_cli(args: argparse.Namespace) -> None:
     for item in items:
         logger.info("Linha %s | Código/Referência: %s | Quantidade: %s", item.row_number, item.code_or_reference, item.quantity)
 
+    # Lê o CNPJ do requisitante direto da planilha (antes do cabeçalho dos itens).
+    # --cliente na CLI sobrescreve caso queira testar com outro CNPJ.
+    cnpj_from_excel = read_cnpj_from_excel(excel_path, config.excel)
+    cnpj = args.cliente or cnpj_from_excel
+    if cnpj:
+        logger.info("CNPJ do requisitante: %s", cnpj)
+    else:
+        logger.warning("CNPJ do requisitante não encontrado na planilha nem via --cliente.")
+
     app = AutomotivApp(config, logger)
     app.start()
     app.login()
@@ -49,10 +58,11 @@ def run_cli(args: argparse.Namespace) -> None:
     material_service = MaterialService(app, site_service, logger)
     material_results = material_service.process_items(items)
 
+    # Busca o código interno do cliente no GRV após processar os materiais.
     client_code = None
-    if args.cliente:
+    if cnpj:
         cliente_service = ClienteService(app, logger)
-        client_code = cliente_service.find_client_code(args.cliente)
+        client_code = cliente_service.find_client_code(cnpj)
         logger.info("Código do cliente retornado: %s", client_code)
 
     budget_number = None
