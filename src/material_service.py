@@ -31,8 +31,10 @@ class MaterialService:
     def process_items(self, items: list[BudgetItem]) -> list[MaterialProcessResult]:
         self.app.open_materials_screen()
         results: list[MaterialProcessResult] = []
+        last_idx = len(items) - 1
 
-        for item in items:
+        for idx, item in enumerate(items):
+            is_last = idx == last_idx
             self.logger.info(
                 "Processando material da linha %s | código/referência=%s | quantidade=%s",
                 item.row_number,
@@ -51,8 +53,10 @@ class MaterialService:
                         message="Material localizado no GRV.",
                     )
                 )
+                # Fecha a tela de resultado. Se houver próximo item, reabre materiais.
                 self.app.close_current_screen()
-                self.app.open_materials_screen()
+                if not is_last:
+                    self.app.open_materials_screen()
             else:
                 self.logger.warning(
                     "Material não encontrado no GRV: %s. Fechando app e pesquisando no site.",
@@ -80,11 +84,12 @@ class MaterialService:
                         )
                     )
 
-                self.logger.info("Reabrindo GRV para próximo item.")
+                # Sempre reabre o GRV após o site. Se houver próximo item, abre materiais.
                 self.app.reopen()
-                self.app.open_materials_screen()
+                if not is_last:
+                    self.logger.info("Abrindo materiais para próximo item.")
+                    self.app.open_materials_screen()
 
-        # Fecha a tela de materiais ao final para que o próximo fluxo
-        # (cliente, orçamento) possa navegar livremente pelos menus.
-        self.app.close_current_screen()
+        # Ao sair do loop o GRV está aberto na tela principal, pronto para
+        # o fluxo de cliente e orçamento sem nenhuma sub-tela aberta.
         return results
