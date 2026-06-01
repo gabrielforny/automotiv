@@ -334,19 +334,21 @@ class AutomotivApp:
         items: list[Any],
         margins_by_code: dict[str, str] | None = None,
     ) -> str | None:
-        """Estrutura inicial para criar orçamento com os itens já validados.
-
-        As imagens ainda precisam ser recortadas/configuradas. A função já deixa os pontos
-        certos para você ir habilitando no Windows real.
-        """
         self.logger.info("Iniciando criação de orçamento para empresa=%s | itens=%s", company_code, len(items))
         if self.config.runtime.dry_run:
             return None
-        
+
+        # MAPEAR: botão X da aba do cliente (o mesmo btn_fechar_aba já usado em materiais).
+        # Fecha a aba de Cliente para voltar ao GRV principal antes de abrir o orçamento.
         self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
         time.sleep(3)
 
+        # Abre menu: Orçamento > Orçamento > Novo (ou pressiona F2 se configurado).
+        # MAPEAR: imagens dos itens de menu "menu_orcamento", "menu_orcamento_submenu", "menu_orcamento_novo".
         self.open_budget_new_screen()
+
+        # MAPEAR: clicar na área em branco da grade de itens do orçamento (primeira linha vazia).
+        # É a célula da coluna "Código" na linha 1 da grade de itens.
         self._click_budget_blank_area()
 
         for index, item in enumerate(items, start=1):
@@ -364,12 +366,16 @@ class AutomotivApp:
         return self._fill_budget_data_and_observation(company_code=company_code)
 
     def _click_budget_blank_area(self) -> None:
+        # MAPEAR: recortar a célula vazia da coluna "Código" na primeira linha da grade de itens.
         if self._get_image_name("budget_blank_area"):
             self._click_configured_image_or_fail("budget_blank_area", timeout=10)
         else:
             self.logger.warning("Imagem budget_blank_area não configurada. Clique manual/teclado ainda precisa ser ajustado.")
 
     def _type_budget_item_code(self, code: str) -> None:
+        # O cursor já está no campo "Código" da linha atual.
+        # Cola o código do material (Ctrl+V) e pressiona ENTER para confirmar e preencher os dados do item.
+        # Após o ENTER o GRV pode exibir um modal de mensagem — tratado por handle_optional_message_modal.
         pyperclip.copy(code)
         keyboard.send_keys("^v")
         keyboard.send_keys("{ENTER}")
@@ -377,8 +383,11 @@ class AutomotivApp:
         self.handle_optional_message_modal()
 
     def _type_budget_item_quantity(self, quantity: str) -> None:
+        # MAPEAR: campo "Quantidade" da linha de item — recortar o campo QTD na grade do orçamento.
+        # Se a imagem não estiver configurada, assume que o foco já está no campo após o ENTER do código.
         if self._get_image_name("budget_quantity_field"):
             self._click_configured_image_or_fail("budget_quantity_field", timeout=5)
+        # Seleciona tudo (Ctrl+A) e cola a quantidade (Ctrl+V), depois ENTER para confirmar.
         pyperclip.copy(str(quantity))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
@@ -386,8 +395,11 @@ class AutomotivApp:
         time.sleep(0.3)
 
     def _type_budget_item_margin(self, margin: str) -> None:
+        # MAPEAR: campo "Margem" (ou "% Margem") da linha de item na grade do orçamento.
+        # Se a imagem não estiver configurada, assume que o foco já está no campo após o ENTER da quantidade.
         if self._get_image_name("budget_margin_field"):
             self._click_configured_image_or_fail("budget_margin_field", timeout=5)
+        # Seleciona tudo e cola o valor da margem, depois ENTER para confirmar.
         pyperclip.copy(str(margin))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
@@ -396,6 +408,8 @@ class AutomotivApp:
 
     def _go_to_next_budget_item_line(self, index: int) -> None:
         self.logger.info("Indo para próxima linha do orçamento. Linha atual=%s", index)
+        # MAPEAR: botão "+" ou ícone de nova linha da grade de itens do orçamento.
+        # Se não mapeado, usa seta para baixo como fallback (funciona na maioria dos grids GRV).
         if self._get_image_name("budget_add_next_line_area"):
             self._click_configured_image_or_fail("budget_add_next_line_area", timeout=5)
         else:
@@ -404,16 +418,26 @@ class AutomotivApp:
 
     def _fill_budget_data_and_observation(self, company_code: str | None) -> str | None:
         self.logger.info("Preenchendo dados finais do orçamento e observação.")
+
+        # MAPEAR: aba "Dados" do orçamento (geralmente fica logo abaixo da grade de itens).
+        # Clicar nessa aba para acessar campos como número do pedido do cliente.
         if self._get_image_name("budget_tab_data"):
             self._click_configured_image_or_fail("budget_tab_data", timeout=8)
+
+        # MAPEAR: campo "Nº Pedido" (ou "Pedido do Cliente") dentro da aba Dados.
+        # Cola o texto de observation_placeholder (definido em config.yaml > workflow).
         if self._get_image_name("budget_order_number_field"):
             self._click_configured_image_or_fail("budget_order_number_field", timeout=5)
             pyperclip.copy(self.config.workflow.observation_placeholder)
             keyboard.send_keys("^a")
             keyboard.send_keys("^v")
 
+        # MAPEAR: aba "Observação" do orçamento (ao lado da aba Dados).
         if self._get_image_name("budget_tab_observation"):
             self._click_configured_image_or_fail("budget_tab_observation", timeout=8)
+
+        # MAPEAR: área de texto livre dentro da aba Observação.
+        # Cola o texto de observação (placeholder + transportadora, se encontrada).
         if self._get_image_name("budget_observation_text_area"):
             self._click_configured_image_or_fail("budget_observation_text_area", timeout=5)
             observation = self._build_observation_text(company_code=company_code)
@@ -423,6 +447,8 @@ class AutomotivApp:
         return None
 
     def _build_observation_text(self, company_code: str | None) -> str:
+        # Busca o código da transportadora do último pedido deste cliente (ainda não implementado).
+        # Se não encontrar, usa só o texto padrão de observation_placeholder.
         carrier_code = self.find_carrier_code(company_code=company_code)
         if not carrier_code:
             return self.config.workflow.observation_placeholder
@@ -504,8 +530,11 @@ class AutomotivApp:
             self._click_configured_image_or_fail("search_by_cnpj_cpf", timeout=10)
             return
         keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
         keyboard.send_keys("{END}")
-        keyboard.send_keys("{ENTER}")
+        time.sleep(0.4)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
 
     def _extract_first_client_code(self, cpf_or_cnpj: str) -> str | None:
         self.logger.info("Exportando grid de clientes para Excel.")
