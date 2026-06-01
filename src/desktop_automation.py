@@ -92,7 +92,12 @@ class AutomotivApp:
         self.logger.info("Abrindo Cadastro > Cliente.")
         if self.config.runtime.dry_run:
             return
-        self._send_menu_sequence(["Cadastro", "Cliente"])
+        self._send_menu_sequence(["Cadastro"])
+        keyboard.send_keys("{DOWN}")
+        time.sleep(0.4)
+        keyboard.send_keys("{DOWN}")
+        time.sleep(0.4)
+        keyboard.send_keys("{ENTER}")
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def open_budget_new_screen(self) -> None:
