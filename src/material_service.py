@@ -84,4 +84,7 @@ class MaterialService:
                 self.app.reopen()
                 self.app.open_materials_screen()
 
+        # Fecha a tela de materiais ao final para que o próximo fluxo
+        # (cliente, orçamento) possa navegar livremente pelos menus.
+        self.app.close_current_screen()
         return results
