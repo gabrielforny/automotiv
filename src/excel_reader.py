@@ -213,12 +213,15 @@ def unique_codes(items: Iterable[BudgetItem]) -> list[str]:
     return result
 
 
+_CNPJ_VALUE_COLUMN = 17  # Coluna Q — célula mesclada Q:T onde fica o CNPJ do requisitante
+
+
 def read_cnpj_from_excel(excel_path: str | Path, config: ExcelConfig) -> str | None:
     """Lê o CNPJ do requisitante da planilha.
 
-    Varre as linhas antes do cabeçalho dos itens procurando uma célula que
-    contenha 'CNPJ' (ex.: 'CNPJ DO REQUISITANTE') e retorna o valor da
-    célula imediatamente à direita.
+    Varre as linhas antes do cabeçalho procurando a label 'CNPJ DO REQUISITANTE'
+    e retorna o valor da coluna Q (17) da mesma linha, que é onde o CNPJ fica
+    na célula mesclada Q:T.
     """
     path = Path(excel_path)
     if not path.exists():
@@ -231,11 +234,11 @@ def read_cnpj_from_excel(excel_path: str | Path, config: ExcelConfig) -> str | N
         for cell in sheet[row_idx]:
             label = _normalize_header(cell.value)
             if "CNPJ" in label:
-                # Pega a célula à direita da label
-                next_cell = sheet.cell(row=cell.row, column=cell.column + 1)
-                value = _to_clean_text(next_cell.value)
+                value_cell = sheet.cell(row=row_idx, column=_CNPJ_VALUE_COLUMN)
+                value = _to_clean_text(value_cell.value)
                 workbook.close()
                 return value if value else None
 
     workbook.close()
+    return None
     return None
