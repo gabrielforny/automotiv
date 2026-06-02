@@ -447,11 +447,11 @@ class AutomotivApp:
         time.sleep(0.4)
 
     def _preencher_dados_e_observacao(self, carrier_code: str | None = None) -> str | None:
-        self.logger.info("Preenchendo dados finais do orçamento e observação.")
+        self.logger.info("Preenchendo dados finais do orçamento e observação. carrier_code=%r", carrier_code)
 
         self._click_configured_image_or_fail("aba_dados_orcamento", timeout=8)
         time.sleep(3)
-        keyboard.send_keys("{TAB}")
+        self._click_configured_image_or_fail("icone_obrigatorio", timeout=8)
         time.sleep(2)
         pyperclip.copy(self.config.workflow.observation_placeholder)
         keyboard.send_keys("^a")

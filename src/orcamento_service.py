@@ -31,18 +31,22 @@ class OrcamentoService:
             return None
 
         material_codes = [result.item.code_or_reference for result in found_results]
+        self.logger.info(
+            "carrier_code recebido do PADRÕES: %r | company_code=%r | company_name=%r",
+            carrier_code, company_code, company_name,
+        )
         # margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
         #     company_code=company_code,
         #     material_codes=material_codes,
         #     company_name=company_name,
         # )
-        margins_by_code, carrier_from_orders = {}, None  # TODO: implementar busca real
+        margins_by_code, carrier_from_orders = {}, None  # busca de pedidos anteriores pendente
 
-        # Pedidos anteriores têm prioridade sobre a aba PADRÕES (dado mais recente)
+        # Pedidos anteriores têm prioridade; se não houver, usa o da aba PADRÕES
         final_carrier = carrier_from_orders or carrier_code
         self.logger.info(
-            "Transportadora final: %s (pedidos=%s | padrão=%s)",
-            final_carrier, carrier_from_orders, carrier_code,
+            "Transportadora: padrão=%r | pedidos=%r | final=%r",
+            carrier_code, carrier_from_orders, final_carrier,
         )
 
         budget_number = self.app.criar_orcamento(
