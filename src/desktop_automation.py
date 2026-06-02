@@ -471,12 +471,14 @@ class AutomotivApp:
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         self.logger.info("Preenchido campo de observação do orçamento.")
+        time.sleep(1)
+        keyboard.send_keys("{ENTER}")
         return None
 
     def _montar_texto_observacao(self, carrier_code: str | None) -> str:
         if not carrier_code:
             return self.config.workflow.observation_placeholder
-        return f"{self.config.workflow.observation_placeholder}\nTransportadora: {carrier_code}"
+        return carrier_code
 
     def buscar_margens_pedidos_anteriores(
         self,
