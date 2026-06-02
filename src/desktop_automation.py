@@ -354,6 +354,7 @@ class AutomotivApp:
         self._clicar_campo_codigo_grade()
         time.sleep(2)
 
+        total_items = len(items)
         for index, item in enumerate(items, start=1):
             code = getattr(item, "code_or_reference", None) or item.get("code_or_reference")
             quantity = getattr(item, "quantity", None) or item.get("quantity")
@@ -364,7 +365,8 @@ class AutomotivApp:
             self._digitar_quantidade_item(str(quantity))
             if margin:
                 self._digitar_margem_item(str(margin))
-            self._ir_proxima_linha_grade(index=index)
+            if index < total_items:
+                self._ir_proxima_linha_grade(index=index)
 
         return self._preencher_dados_e_observacao(company_code=company_code)
 
@@ -377,6 +379,7 @@ class AutomotivApp:
             self._click_configured_image_or_fail("lupa_fora_selecao", timeout=10)
         time.sleep(2)
         keyboard.send_keys("{ESC}")
+        time.sleep(2)
         self.logger.warning("Clicado na coluna de código de grade")
 
     def _digitar_codigo_item(self, code: str) -> None:
@@ -447,18 +450,20 @@ class AutomotivApp:
         pyperclip.copy(self.config.workflow.observation_placeholder)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
-
+        time.sleep(0.4)
+        keyboard.send_keys("{ENTER}")
+        time.sleep(2)
         self._click_configured_image_or_fail("aba_observacao_orcamento", timeout=8)
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
         
-        # MAPEAR: area_texto_observacao — textarea livre dentro da aba Observação.
-        if self._get_image_name("area_texto_observacao"):
-            self._click_configured_image_or_fail("area_texto_observacao", timeout=5)
-            observation = self._montar_texto_observacao(company_code=company_code)
-            pyperclip.copy(observation)
-            keyboard.send_keys("^a")
-            keyboard.send_keys("^v")
+        self._click_configured_image_or_fail("area_texto_observacao", timeout=5)
+        observation = self._montar_texto_observacao(company_code=company_code)
+        keyboard.send_keys("{TAB}")
+        time.sleep(1)
+        pyperclip.copy(observation)
+        keyboard.send_keys("^a")
+        keyboard.send_keys("^v")
         return None
 
     def _montar_texto_observacao(self, company_code: str | None) -> str:
@@ -637,14 +642,7 @@ class AutomotivApp:
 
     def gravar_orcamento(self) -> None:
         self.logger.info("Gravando orçamento.")
-        if self.config.runtime.dry_run:
-            return
-        # MAPEAR: botao_gravar_f3 — botão "Gravar" (F3) na barra de ferramentas do orçamento.
-        # Se não mapeado, envia F3 diretamente.
-        if self._get_image_name("botao_gravar_f3"):
-            self._click_configured_image_or_fail("botao_gravar_f3", timeout=10)
-        else:
-            keyboard.send_keys("{F3}")
+        self._click_configured_image_or_fail("botao_gravar_f3", timeout=10)
         time.sleep(1)
         self._tratar_erro_gravacao()
 
