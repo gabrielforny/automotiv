@@ -351,7 +351,6 @@ class AutomotivApp:
         self.abrir_novo_orcamento()
 
         time.sleep(5)
-        # MAPEAR: campo_codigo_grade_orcamento — célula vazia da coluna "Código" na linha 1 da grade de itens.
         self._clicar_campo_codigo_grade()
         time.sleep(2)
 
@@ -370,8 +369,14 @@ class AutomotivApp:
         return self._preencher_dados_e_observacao(company_code=company_code)
 
     def _clicar_campo_codigo_grade(self) -> None:
-        # MAPEAR: campo_codigo_grade_orcamento — recortar a célula da coluna "Código" na 1ª linha da grade.
         self._click_configured_image_or_fail("campo_codigo_grade_orcamento", timeout=10)
+        time.sleep(3)
+        try:
+            self._click_configured_image_or_fail("lupa_dentro_selecao", timeout=10)
+        except Exception as exc:
+            self._click_configured_image_or_fail("lupa_fora_selecao", timeout=10)
+        time.sleep(2)
+        keyboard.send_keys("{ESC}")
         self.logger.warning("Clicado na coluna de código de grade")
 
     def _digitar_codigo_item(self, code: str) -> None:

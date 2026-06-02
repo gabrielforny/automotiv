@@ -92,6 +92,8 @@ class ImagesConfig(BaseModel):
     campo_numero_pedido: str = "campo_numero_pedido.png"
     area_texto_observacao: str = "area_texto_observacao.png"
     botao_gravar_f3: str = "botao_gravar_f3.png"
+    lupa_dentro_selecao: str = "lupa_dentro_selecao.png"
+    lupa_fora_selecao: str = "lupa_fora_selecao.png"
 
     previous_orders_search_all_checkbox: str = "previous_orders_search_all_checkbox.png"
     previous_orders_client_code_field: str = "previous_orders_client_code_field.png"

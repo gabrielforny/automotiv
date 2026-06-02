@@ -105,6 +105,8 @@ images:
   campo_numero_pedido: "campo_numero_pedido.png"
   area_texto_observacao: "area_texto_observacao.png"
   botao_gravar_f3: "botao_gravar_f3.png"
+  lupa_dentro_selecao: "lupa_dentro_selecao.png"
+  lupa_fora_selecao: "lupa_fora_selecao.png"
 
   previous_orders_search_all_checkbox: "previous_orders_search_all_checkbox.png"
   previous_orders_client_code_field: "previous_orders_client_code_field.png"
