@@ -22,6 +22,7 @@ class OrcamentoService:
         results: list[MaterialProcessResult],
         company_code: str | None = None,
         company_name: str | None = None,
+        carrier_code: str | None = None,
     ) -> str | None:
         found_results = [result for result in results if result.found]
 
@@ -30,17 +31,24 @@ class OrcamentoService:
             return None
 
         material_codes = [result.item.code_or_reference for result in found_results]
-        # margins_by_code = self.app.buscar_margens_pedidos_anteriores(
-        #     company_code=company_code,
-        #     material_codes=material_codes,
-        #     company_name=company_name,
-        # )
-        margins_by_code = {}  # TODO: implementar busca de margens em pedidos anteriores (GRV) e usar aqui.
+        margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
+            company_code=company_code,
+            material_codes=material_codes,
+            company_name=company_name,
+        )
+
+        # Pedidos anteriores têm prioridade sobre a aba PADRÕES (dado mais recente)
+        final_carrier = carrier_from_orders or carrier_code
+        self.logger.info(
+            "Transportadora final: %s (pedidos=%s | padrão=%s)",
+            final_carrier, carrier_from_orders, carrier_code,
+        )
 
         budget_number = self.app.criar_orcamento(
             company_code=company_code,
             items=[result.item for result in found_results],
             margins_by_code=margins_by_code,
+            carrier_code=final_carrier,
         )
 
         self.app.gravar_orcamento()

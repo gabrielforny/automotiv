@@ -11,19 +11,21 @@ class ClienteService:
         self.app = app
         self.logger = logger
 
-    def find_client_code(self, cpf_or_cnpj: str) -> str | None:
+    def find_client_code(self, cpf_or_cnpj: str) -> tuple[str | None, str | None]:
+        """Retorna (client_code, carrier_code). Carrier vem da aba PADRÕES do cadastro do cliente."""
         self.app.open_clients_screen()
 
-        code = None
+        code: str | None = None
+        carrier_code: str | None = None
         for value in cpf_cnpj_search_variations(cpf_or_cnpj):
             self.logger.info("Tentando buscar cliente com: %s", value)
-            code = self.app.search_client_and_get_code(value)
+            code, carrier_code = self.app.search_client_and_get_code(value)
             if code:
-                self.logger.info("Cliente encontrado. Código: %s", code)
+                self.logger.info("Cliente encontrado. Código: %s | Transportadora: %s", code, carrier_code)
                 break
 
         if not code:
             self.logger.warning("Cliente não encontrado para CPF/CNPJ informado: %s", cpf_or_cnpj)
 
         self.app.close_current_screen()
-        return code
+        return code, carrier_code

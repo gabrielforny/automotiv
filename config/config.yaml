@@ -113,6 +113,9 @@ images:
   previous_orders_date_range_field: "previous_orders_date_range_field.png"
   previous_order_open_button: "previous_order_open_button.png"
 
+  aba_padrao_cliente: "aba_padrao_cliente.png"
+  btn_ok_exportacao: "btn_ok_exportacao.png"
+
   carrier_code_field: "carrier_code_field.png"
   carrier_pattern_tab: "carrier_pattern_tab.png"
   print_ok_button: "print_ok_button.png"

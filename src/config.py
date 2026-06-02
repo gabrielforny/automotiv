@@ -100,6 +100,9 @@ class ImagesConfig(BaseModel):
     previous_orders_date_range_field: str = "previous_orders_date_range_field.png"
     previous_order_open_button: str = "previous_order_open_button.png"
 
+    aba_padrao_cliente: str = "aba_padrao_cliente.png"
+    btn_ok_exportacao: str = "btn_ok_exportacao.png"
+
     carrier_code_field: str = "carrier_code_field.png"
     carrier_pattern_tab: str = "carrier_pattern_tab.png"
     print_ok_button: str = "print_ok_button.png"

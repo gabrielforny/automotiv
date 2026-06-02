@@ -340,6 +340,7 @@ class AutomotivApp:
         company_code: str | None,
         items: list[Any],
         margins_by_code: dict[str, str] | None = None,
+        carrier_code: str | None = None,
     ) -> str | None:
         self.logger.info("Iniciando criação de orçamento para empresa=%s | itens=%s", company_code, len(items))
         if self.config.runtime.dry_run:
@@ -368,7 +369,7 @@ class AutomotivApp:
             if index < total_items:
                 self._ir_proxima_linha_grade(index=index)
 
-        return self._preencher_dados_e_observacao(company_code=company_code)
+        return self._preencher_dados_e_observacao(carrier_code=carrier_code)
 
     def _clicar_campo_codigo_grade(self) -> None:
         self._click_configured_image_or_fail("campo_codigo_grade_orcamento", timeout=10)
@@ -440,7 +441,7 @@ class AutomotivApp:
         keyboard.send_keys("{DOWN}")
         time.sleep(0.4)
 
-    def _preencher_dados_e_observacao(self, company_code: str | None) -> str | None:
+    def _preencher_dados_e_observacao(self, carrier_code: str | None = None) -> str | None:
         self.logger.info("Preenchendo dados finais do orçamento e observação.")
 
         self._click_configured_image_or_fail("aba_dados_orcamento", timeout=8)
@@ -458,7 +459,7 @@ class AutomotivApp:
         time.sleep(0.4)
         
         self._click_configured_image_or_fail("area_texto_observacao", timeout=5)
-        observation = self._montar_texto_observacao(company_code=company_code)
+        observation = self._montar_texto_observacao(carrier_code=carrier_code)
         keyboard.send_keys("{TAB}")
         time.sleep(1)
         pyperclip.copy(observation)
@@ -466,9 +467,7 @@ class AutomotivApp:
         keyboard.send_keys("^v")
         return None
 
-    def _montar_texto_observacao(self, company_code: str | None) -> str:
-        # Busca transportadora do último pedido deste cliente (ainda não implementado).
-        carrier_code = self.buscar_codigo_transportadora(company_code=company_code)
+    def _montar_texto_observacao(self, carrier_code: str | None) -> str:
         if not carrier_code:
             return self.config.workflow.observation_placeholder
         return f"{self.config.workflow.observation_placeholder}\nTransportadora: {carrier_code}"
@@ -478,18 +477,21 @@ class AutomotivApp:
         company_code: str | None,
         material_codes: list[str],
         company_name: str | None = None,
-    ) -> dict[str, str]:
-        """Busca margens usadas em orçamentos anteriores deste cliente para os códigos informados."""
+    ) -> tuple[dict[str, str], str | None]:
+        """Busca margens e código de transportadora em orçamentos anteriores do cliente.
+
+        Retorna (margins_by_code, carrier_code). O carrier_code vem do pedido mais recente
+        que contenha essa informação; se não encontrado em nenhum pedido, retorna None.
+        """
         self.logger.info("Buscando margens anteriores para empresa=%s | nome=%s | códigos=%s", company_code, company_name, material_codes)
         if not company_code or self.config.runtime.dry_run:
-            return {}
+            return {}, None
 
         self.open_previous_orders_search()
         self.press_search_f5()
         search_term = company_name or company_code
         self._filtrar_pedidos_anteriores_por_cliente(search_term)
 
-        # Exporta a lista de pedidos encontrados e conta quantas linhas há
         exported_list = self._export_grid_to_excel(company_code)
         try:
             order_count = self._contar_linhas_excel(exported_list)
@@ -499,29 +501,27 @@ class AutomotivApp:
         if order_count == 0:
             self.logger.info("Nenhum pedido anterior encontrado para o cliente %s.", company_code)
             self._fechar_tela_pedidos_anteriores()
-            return {}
+            return {}, None
 
         margins: dict[str, str] = {}
+        carrier_code: str | None = None
         target_codes = {str(c) for c in material_codes}
         max_orders = self.config.workflow.previous_orders_max_to_check
 
-        # Posiciona no primeiro item da lista (pedido mais recente)
         keyboard.send_keys("{HOME}")
         time.sleep(0.3)
 
         for order_idx in range(min(order_count, max_orders)):
-            if len(margins) == len(target_codes):
-                break  # já encontrou margem para todos os materiais
+            if len(margins) == len(target_codes) and carrier_code:
+                break
 
             self.logger.info("Abrindo pedido %s/%s para buscar margens.", order_idx + 1, min(order_count, max_orders))
-
-            # ENTER abre o orçamento selecionado na grade de resultados
             keyboard.send_keys("{ENTER}")
             time.sleep(1.5)
 
             exported_items = self._export_grid_to_excel(f"{company_code}_pedido_{order_idx}")
             try:
-                order_margins = self._ler_margens_do_excel_de_itens(exported_items, target_codes)
+                order_margins, order_carrier = self._ler_margens_do_excel_de_itens(exported_items, target_codes)
             finally:
                 self._delete_file_safely(exported_items)
 
@@ -530,17 +530,19 @@ class AutomotivApp:
                     margins[code] = margin
                     self.logger.info("Margem encontrada: código=%s | margem=%s", code, margin)
 
-            # Fecha o pedido aberto e volta para a lista de resultados
+            # Usa o carrier do pedido mais recente (primeiro encontrado)
+            if not carrier_code and order_carrier:
+                carrier_code = order_carrier
+                self.logger.info("Código de transportadora encontrado no pedido %s: %s", order_idx + 1, carrier_code)
+
             self._try_close_dialog()
             self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
             time.sleep(0.8)
-
-            # Desce para o próximo pedido na lista
             keyboard.send_keys("{DOWN}")
             time.sleep(0.3)
 
         self._fechar_tela_pedidos_anteriores()
-        return margins
+        return margins, carrier_code
 
     def _filtrar_pedidos_anteriores_por_cliente(self, search_term: str) -> None:
         # search_term é o Nome Fantasia (preferido) ou código numérico do cliente como fallback.
@@ -607,17 +609,31 @@ class AutomotivApp:
             or headers.get("% Margem")
         )
 
+        carrier_col = (
+            headers.get("*Transportadora")
+            or headers.get("Transportadora")
+            or headers.get("*Cód. Transportadora")
+            or headers.get("Cód. Transportadora")
+            or headers.get("*Cod. Transportadora")
+            or headers.get("Cod. Transportadora")
+        )
+
         if not code_col or not margin_col:
             self.logger.warning(
                 "Colunas de código/margem não encontradas no Excel de itens. Disponíveis: %s",
                 list(headers.keys()),
             )
             workbook.close()
-            return {}
+            return {}, None
 
         result: dict[str, str] = {}
+        carrier_code: str | None = None
         for row in range(2, sheet.max_row + 1):
             code = str(sheet.cell(row=row, column=code_col).value or "").strip()
+            if carrier_col and not carrier_code:
+                cv = str(sheet.cell(row=row, column=carrier_col).value or "").strip()
+                if cv:
+                    carrier_code = cv
             if code not in target_codes:
                 continue
             margin_value = sheet.cell(row=row, column=margin_col).value
@@ -625,7 +641,7 @@ class AutomotivApp:
                 result[code] = str(margin_value).strip()
 
         workbook.close()
-        return result
+        return result, carrier_code
 
     def _fechar_tela_pedidos_anteriores(self) -> None:
         self._try_close_dialog()
@@ -679,18 +695,50 @@ class AutomotivApp:
         if not self.config.runtime.dry_run:
             webbrowser.open(self.config.search.fallback_site)
 
-    def search_client_and_get_code(self, cpf_or_cnpj: str) -> str | None:
+    def search_client_and_get_code(self, cpf_or_cnpj: str) -> tuple[str | None, str | None]:
+        """Retorna (client_code, carrier_code). Carrier lido da aba PADRÕES do cadastro do cliente."""
         self.logger.info("Pesquisando cliente por CPF/CNPJ: %s", cpf_or_cnpj)
         if self.config.runtime.dry_run:
-            return None
+            return None, None
         self.press_search_f5()
         self._select_search_by_cpf_cnpj()
         self._garantir_radio_todos()
         self._type_search_text(cpf_or_cnpj)
         time.sleep(2)
         code = self._extract_first_client_code(cpf_or_cnpj)
-        self._try_close_dialog()
-        return code
+        carrier_code = None
+        if code:
+            self._fechar_confirmacao_exportacao()
+            carrier_code = self._ler_codigo_transportadora_aba_padrao()
+        self._click_configured_image_or_fail("btn_fechar_aba", timeout=5)
+        return code, carrier_code
+
+    def _fechar_confirmacao_exportacao(self) -> None:
+        """Fecha o diálogo de confirmação pós-exportação, mantendo o modal de pesquisa aberto."""
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=5)
+        time.sleep(5)
+        if self._get_image_name("btn_ok_exportacao"):
+            self._click_configured_image_or_fail("btn_ok_exportacao", timeout=5)
+        else:
+            keyboard.send_keys("{ENTER}")
+        time.sleep(0.5)
+
+    def _ler_codigo_transportadora_aba_padrao(self) -> str | None:
+        """Clica na aba PADRÕES do cadastro do cliente, navega até o campo de transportadora e copia."""
+        self._click_configured_image_or_fail("aba_padrao_cliente", timeout=8)
+        time.sleep(0.5)
+        self._click_configured_image_or_fail("aba_padrao_cliente", timeout=8)
+        time.sleep(0.5)
+        for _ in range(18):
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.1)
+        time.sleep(0.5)
+        keyboard.send_keys("^a")
+        keyboard.send_keys("^c")
+        time.sleep(0.3)
+        value = pyperclip.paste().strip()
+        self.logger.info("Código de transportadora da aba PADRÕES: %s", value or "(vazio)")
+        return value or None
 
     def _select_search_by_cpf_cnpj(self) -> None:
         self._click_configured_image_or_fail("search_by_cnpj_cpf", timeout=10)
