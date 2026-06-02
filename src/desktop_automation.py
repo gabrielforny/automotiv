@@ -669,9 +669,10 @@ class AutomotivApp:
         self.logger.info("Gravando orçamento.")
         self._click_configured_image_or_fail("botao_gravar_f3", timeout=10)
         time.sleep(1)
-        self._tratar_erro_gravacao()
+        self._tratar_erro_gravacao(True)
+        time.sleep(2)
 
-    def _tratar_erro_gravacao(self) -> None:
+    def _tratar_erro_gravacao(self, is_gravar: bool) -> None:
         for attempt in range(1, self.config.workflow.save_retry_attempts + 1):
             self.logger.info("Verificando erro de gravação. Tentativa %s", attempt)
             if not self._get_image_name("save_error_modal_ok_button"):
@@ -692,14 +693,16 @@ class AutomotivApp:
             if not clicked:
                 return
             time.sleep(0.5)
-            self.gravar_orcamento()
+            if is_gravar:
+                self.logger.info("Tentando gravar novamente após erro.")
+                self.gravar_orcamento()
 
     def gerar_pdf_orcamento(self) -> None:
         self.logger.info("Gerando PDF do orçamento.")
-        if not self.config.workflow.generate_pdf or self.config.runtime.dry_run:
-            return
-        # Envia pelo menu: Imprimir > Imprimir Orçamento Padrão.
         self._send_menu_sequence(["Imprimir", "Imprimir Orçamento Padrão"])
+        time.sleep(2)
+        self._tratar_erro_gravacao(False)
+        time.sleep(2)
         if self._get_image_name("print_ok_button"):
             self.image.click_if_exists(self._get_required_image_name("print_ok_button"), timeout=5, confidence=self._get_confidence())
 
