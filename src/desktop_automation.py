@@ -680,7 +680,7 @@ class AutomotivApp:
             return None
         self.press_search_f5()
         self._select_search_by_cpf_cnpj()
-        self._set_material_status()  # Reutiliza o mesmo método para setar o status "Ativo" na pesquisa de clientes.
+        self._click_configured_image_or_fail("status_todos", timeout=10)
         self._type_search_text(cpf_or_cnpj)
         time.sleep(2)
         code = self._extract_first_client_code(cpf_or_cnpj)
