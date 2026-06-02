@@ -854,6 +854,19 @@ class AutomotivApp:
         self.start()
         self.login()
 
+    def focus_app(self) -> None:
+        """Traz a janela do GRV de volta ao foco após o browser fechar."""
+        self.logger.info("Trazendo GRV de volta ao foco.")
+        if self.config.runtime.dry_run:
+            return
+        try:
+            desktop = Desktop(backend="uia")
+            window = desktop.window(title_re=self.config.app.window_title_regex)
+            window.set_focus()
+            time.sleep(0.5)
+        except Exception as exc:
+            self.logger.warning("Não foi possível focar a janela do GRV: %s", exc)
+
     # ================================
     # Utilitários
     # ================================

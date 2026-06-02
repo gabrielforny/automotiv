@@ -59,10 +59,9 @@ class MaterialService:
                     self.app.open_materials_screen()
             else:
                 self.logger.warning(
-                    "Material não encontrado no GRV: %s. Fechando app e pesquisando no site.",
+                    "Material não encontrado no GRV: %s. Pesquisando no site.",
                     item.code_or_reference,
                 )
-                self.app.close_app()
                 site_material = self.site_service.search(item.code_or_reference)
 
                 if site_material:
@@ -84,8 +83,10 @@ class MaterialService:
                         )
                     )
 
-                # Sempre reabre o GRV após o site. Se houver próximo item, abre materiais.
-                self.app.reopen()
+                # Traz o GRV de volta ao foco (Chrome foi fechado pelo Selenium).
+                # Fecha a tela de materiais e reabre se houver próximo item.
+                self.app.focus_app()
+                self.app.close_current_screen()
                 if not is_last:
                     self.logger.info("Abrindo materiais para próximo item.")
                     self.app.open_materials_screen()
