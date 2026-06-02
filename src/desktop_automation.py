@@ -681,6 +681,14 @@ class AutomotivApp:
                 timeout=2,
                 confidence=self._get_confidence(),
             )
+            time.sleep(3)
+            if not self._get_image_name("save_error_modal_ok_button"):
+                return
+            clicked = self.image.click_if_exists(
+                self._get_required_image_name("save_error_modal_ok_button"),
+                timeout=2,
+                confidence=self._get_confidence(),
+            )
             if not clicked:
                 return
             time.sleep(0.5)
