@@ -375,6 +375,7 @@ class AutomotivApp:
         self.logger.warning("Clicado na coluna de código de grade")
 
     def _digitar_codigo_item(self, code: str) -> None:
+        self.logger.warning("Digitando código do item: %s", code)
         pyperclip.copy(code)
         keyboard.send_keys("^v")
         keyboard.send_keys("{ENTER}")
@@ -382,6 +383,7 @@ class AutomotivApp:
         self.handle_optional_message_modal()
 
     def _digitar_quantidade_item(self, quantity: str) -> None:
+        self.logger.warning("Digitando quantidade do item: %s", quantity)
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
