@@ -103,6 +103,7 @@ class ImagesConfig(BaseModel):
     aba_padrao_cliente: str = "aba_padrao_cliente.png"
     btn_ok_exportacao: str = "btn_ok_exportacao.png"
     interrogacao_aba_padrao: str = "interrogacao_aba_padrao.png"
+    filtro_por_cliente: str = "filtro_por_cliente.png"
     
     carrier_code_field: str = "carrier_code_field.png"
     carrier_pattern_tab: str = "carrier_pattern_tab.png"
