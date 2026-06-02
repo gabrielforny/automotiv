@@ -701,23 +701,23 @@ class AutomotivApp:
         if not self.config.runtime.dry_run:
             webbrowser.open(self.config.search.fallback_site)
 
-    def search_client_and_get_code(self, cpf_or_cnpj: str) -> tuple[str | None, str | None]:
-        """Retorna (client_code, carrier_code). Carrier lido da aba PADRÕES do cadastro do cliente."""
+    def search_client_and_get_code(self, cpf_or_cnpj: str) -> tuple[str | None, str | None, str | None]:
+        """Retorna (client_code, carrier_code, company_name). Carrier lido da aba PADRÕES."""
         self.logger.info("Pesquisando cliente por CPF/CNPJ: %s", cpf_or_cnpj)
         if self.config.runtime.dry_run:
-            return None, None
+            return None, None, None
         self.press_search_f5()
         self._select_search_by_cpf_cnpj()
         self._garantir_radio_todos()
         self._type_search_text(cpf_or_cnpj)
         time.sleep(2)
-        code = self._extract_first_client_code(cpf_or_cnpj)
+        code, company_name = self._extract_first_client_code(cpf_or_cnpj)
         carrier_code = None
         if code:
             self._fechar_confirmacao_exportacao()
             carrier_code = self._ler_codigo_transportadora_aba_padrao()
         self._click_configured_image_or_fail("btn_fechar_aba", timeout=5)
-        return code, carrier_code
+        return code, carrier_code, company_name
 
     def _fechar_confirmacao_exportacao(self) -> None:
         """Fecha o diálogo de confirmação pós-exportação, mantendo o modal de pesquisa aberto."""
@@ -766,36 +766,54 @@ class AutomotivApp:
         else:
             self.logger.warning("Imagem 'radio_todos' não encontrada — verifique se está mapeada. Seguindo sem alterar o filtro.")
 
-    def _extract_first_client_code(self, cpf_or_cnpj: str) -> str | None:
+    def _extract_first_client_code(self, cpf_or_cnpj: str) -> tuple[str | None, str | None]:
+        """Retorna (client_code, company_name) da primeira linha da grid de clientes exportada."""
         self.logger.info("Exportando grid de clientes para Excel.")
         exported_file = self._export_grid_to_excel(cpf_or_cnpj)
         try:
-            code = self._find_client_code_in_exported_excel(exported_file)
+            code, name = self._find_client_info_in_exported_excel(exported_file)
             if code:
-                self.logger.info("Código do cliente extraído: %s", code)
+                self.logger.info("Cliente extraído: código=%s | nome=%s", code, name)
             else:
                 self.logger.info("Nenhum código de cliente encontrado no Excel exportado.")
-            return code
+            return code, name
         finally:
             self._delete_file_safely(exported_file)
 
-    def _find_client_code_in_exported_excel(self, excel_path: Path) -> str | None:
+    def _find_client_info_in_exported_excel(self, excel_path: Path) -> tuple[str | None, str | None]:
+        """Retorna (client_code, company_name) da primeira linha do Excel exportado de clientes."""
         workbook = load_workbook(excel_path, data_only=True)
         sheet = workbook.active
         headers = {str(cell.value or "").strip(): cell.column for cell in sheet[1] if cell.value}
+        self.logger.info("Colunas no Excel de clientes exportado: %s", list(headers.keys()))
         code_col = headers.get("*Código") or headers.get("Código") or headers.get("*Codigo") or headers.get("Codigo")
         if code_col is None:
             raise RuntimeError(
                 f"Coluna '*Código' não encontrada no Excel de clientes exportado. "
                 f"Colunas disponíveis: {list(headers.keys())}"
             )
+        name_col = (
+            headers.get("*Nome Fantasia")
+            or headers.get("Nome Fantasia")
+            or headers.get("*Razão Social")
+            or headers.get("Razão Social")
+            or headers.get("*Razao Social")
+            or headers.get("Razao Social")
+            or headers.get("*Nome")
+            or headers.get("Nome")
+        )
         for row in range(2, sheet.max_row + 1):
-            value = sheet.cell(row=row, column=code_col).value
-            if value is not None and str(value).strip():
+            code_value = sheet.cell(row=row, column=code_col).value
+            if code_value is not None and str(code_value).strip():
+                code = str(code_value).strip()
+                name: str | None = None
+                if name_col:
+                    nv = sheet.cell(row=row, column=name_col).value
+                    name = str(nv).strip() if nv is not None and str(nv).strip() else None
                 workbook.close()
-                return str(value).strip()
+                return code, name
         workbook.close()
-        return None
+        return None, None
 
     # ================================
     # Controle do ciclo de vida da app

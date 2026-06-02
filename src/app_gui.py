@@ -150,7 +150,7 @@ class AutomotivBotGui(tk.Tk):
 
             items = read_budget_items(excel_path, config.excel)
             logger.info("Itens lidos da planilha: %s", len(items))
-            company_name = read_company_name_from_excel(excel_path, config.excel)
+            company_name = read_company_name_from_excel(excel_path, config.excel, logger=logger)
             logger.info("Nome da empresa lido da planilha: %s", company_name)
             for item in items:
                 logger.info("Linha %s | Código/Referência: %s | Quantidade: %s", item.row_number, item.code_or_reference, item.quantity)
@@ -167,8 +167,13 @@ class AutomotivBotGui(tk.Tk):
             cliente = self.cliente.get().strip()
             if cliente:
                 cliente_service = ClienteService(app, logger)
-                client_code, carrier_code = cliente_service.find_client_code(cliente)
-                logger.info("Código do cliente retornado: %s | Transportadora PADRÕES: %s", client_code, carrier_code)
+                client_code, carrier_code, client_company_name = cliente_service.find_client_code(cliente)
+                # Nome do GRV tem prioridade; se não encontrado, mantém o do Excel de orçamento
+                company_name = client_company_name or company_name
+                logger.info(
+                    "Cliente: código=%s | transportadora=%s | nome=%s",
+                    client_code, carrier_code, company_name,
+                )
 
             budget_number = None
             if config.workflow.enable_budget_flow:

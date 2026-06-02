@@ -243,7 +243,11 @@ def read_cnpj_from_excel(excel_path: str | Path, config: ExcelConfig) -> str | N
     return None
 
 
-def read_company_name_from_excel(excel_path: str | Path, config: ExcelConfig) -> str | None:
+def read_company_name_from_excel(
+    excel_path: str | Path,
+    config: ExcelConfig,
+    logger=None,
+) -> str | None:
     """Lê o Nome Fantasia (ou Razão Social) do requisitante da planilha.
 
     Varre as linhas antes do cabeçalho procurando labels 'NOME FANTASIA' ou 'RAZAO SOCIAL'
@@ -256,17 +260,46 @@ def read_company_name_from_excel(excel_path: str | Path, config: ExcelConfig) ->
     workbook = load_workbook(path, data_only=True)
     sheet = workbook.active
 
+    if logger:
+        logger.info(
+            "Buscando nome da empresa nas linhas 1 a %s da planilha.",
+            config.header_row - 1,
+        )
+
     for row_idx in range(1, config.header_row):
         for cell in sheet[row_idx]:
+            if cell.value is None:
+                continue
             label = _normalize_header(cell.value)
+            if logger:
+                logger.debug(
+                    "Linha %s | Célula %s | Valor bruto: %r | Normalizado: %s",
+                    row_idx, cell.coordinate, cell.value, label,
+                )
             if "FANTASIA" in label or "RAZAO SOCIAL" in label:
+                if logger:
+                    logger.info(
+                        "Label encontrado na célula %s: %r → procurando valor à direita.",
+                        cell.coordinate, cell.value,
+                    )
                 # Procura a primeira célula não-vazia à direita do label
                 for col_offset in range(1, 20):
                     value_cell = sheet.cell(row=row_idx, column=cell.column + col_offset)
                     value = _to_clean_text(value_cell.value)
                     if value:
+                        if logger:
+                            logger.info(
+                                "Nome da empresa encontrado na célula %s: %r",
+                                value_cell.coordinate, value,
+                            )
                         workbook.close()
                         return value
 
+    if logger:
+        logger.warning(
+            "Nenhum label 'NOME FANTASIA' ou 'RAZAO SOCIAL' encontrado nas linhas 1-%s. "
+            "Retornando None.",
+            config.header_row - 1,
+        )
     workbook.close()
     return None
