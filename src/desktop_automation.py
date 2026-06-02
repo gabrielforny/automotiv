@@ -350,8 +350,10 @@ class AutomotivApp:
 
         self.abrir_novo_orcamento()
 
+        time.sleep(5)
         # MAPEAR: campo_codigo_grade_orcamento — célula vazia da coluna "Código" na linha 1 da grade de itens.
         self._clicar_campo_codigo_grade()
+        time.sleep(2)
 
         for index, item in enumerate(items, start=1):
             code = getattr(item, "code_or_reference", None) or item.get("code_or_reference")
