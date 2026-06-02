@@ -382,8 +382,6 @@ class AutomotivApp:
         self.handle_optional_message_modal()
 
     def _digitar_quantidade_item(self, quantity: str) -> None:
-        self._click_configured_image_or_fail("campo_quantidade_item", timeout=5)
-        # Ctrl+A seleciona tudo, Ctrl+V cola, ENTER confirma.
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
