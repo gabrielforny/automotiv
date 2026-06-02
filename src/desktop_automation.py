@@ -376,8 +376,8 @@ class AutomotivApp:
 
     def _digitar_codigo_item(self, code: str) -> None:
         self.logger.warning("Digitando código do item: %s", code)
-        pyperclip.copy(code)
-        keyboard.send_keys("^v")
+        pyautogui.write(code, interval=0.05)
+        time.sleep(0.3)
         keyboard.send_keys("{ENTER}")
         time.sleep(0.5)
         self.handle_optional_message_modal()
