@@ -102,6 +102,7 @@ images:
   aba_itens_orcamento: "aba_itens_orcamento.png"
   aba_dados_orcamento: "aba_dados_orcamento.png"
   aba_observacao_orcamento: "aba_observacao_orcamento.png"
+  icone_obrigatorio: "icone_obrigatorio.png"
   campo_numero_pedido: "campo_numero_pedido.png"
   area_texto_observacao: "area_texto_observacao.png"
   botao_gravar_f3: "botao_gravar_f3.png"

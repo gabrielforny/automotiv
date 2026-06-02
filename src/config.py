@@ -89,6 +89,7 @@ class ImagesConfig(BaseModel):
     aba_itens_orcamento: str = "aba_itens_orcamento.png"
     aba_dados_orcamento: str = "aba_dados_orcamento.png"
     aba_observacao_orcamento: str = "aba_observacao_orcamento.png"
+    icone_obrigatorio: str = "icone_obrigatorio.png"
     campo_numero_pedido: str = "campo_numero_pedido.png"
     area_texto_observacao: str = "area_texto_observacao.png"
     botao_gravar_f3: str = "botao_gravar_f3.png"
