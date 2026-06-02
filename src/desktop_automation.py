@@ -125,9 +125,6 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
         time.sleep(8)
-        self._click_configured_image_or_fail("menu_orcamento_novo")
-        time.sleep(2)
-        time.sleep(self.config.app.wait_after_open_screen_seconds)
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
@@ -562,6 +559,7 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
         pyperclip.copy(search_term)
+        time.sleep(0.4)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         time.sleep(0.3)
