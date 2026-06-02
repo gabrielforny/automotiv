@@ -9,7 +9,7 @@ from tkinter import filedialog, messagebox, ttk
 from src.cliente_service import ClienteService
 from src.config import load_config
 from src.desktop_automation import AutomotivApp
-from src.excel_reader import read_budget_items
+from src.excel_reader import read_budget_items, read_company_name_from_excel
 from src.logger import setup_logger
 from src.material_service import MaterialService
 from src.history_manager import HistoryManager
@@ -150,6 +150,8 @@ class AutomotivBotGui(tk.Tk):
 
             items = read_budget_items(excel_path, config.excel)
             logger.info("Itens lidos da planilha: %s", len(items))
+            company_name = read_company_name_from_excel(excel_path, config.excel)
+            logger.info("Nome da empresa lido da planilha: %s", company_name)
             for item in items:
                 logger.info("Linha %s | Código/Referência: %s | Quantidade: %s", item.row_number, item.code_or_reference, item.quantity)
 
@@ -170,7 +172,7 @@ class AutomotivBotGui(tk.Tk):
             budget_number = None
             if config.workflow.enable_budget_flow:
                 orcamento_service = OrcamentoService(app, logger)
-                budget_number = orcamento_service.create_from_material_results(material_results, company_code=client_code)
+                budget_number = orcamento_service.create_from_material_results(material_results, company_code=client_code, company_name=company_name)
                 logger.info("Orçamento retornado/gerado: %s", budget_number)
             else:
                 logger.info("Fluxo de orçamento desabilitado em workflow.enable_budget_flow=false.")

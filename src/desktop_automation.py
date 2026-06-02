@@ -99,12 +99,19 @@ class AutomotivApp:
         keyboard.send_keys("{ENTER}")
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
-    def open_budget_new_screen(self) -> None:
-        """Estrutura para: Orçamento > Orçamento - F2 (novo)."""
+    def abrir_novo_orcamento(self) -> None:
+        """Menu: Orçamento > Orçamento > Novo (F2)."""
         self.logger.info("Abrindo Orçamento > Orçamento - F2/novo.")
         if self.config.runtime.dry_run:
             return
-        self._send_menu_sequence(["Orçamento", "Orçamento Submenu", "Orçamento Novo"])
+        self._send_menu_sequence(["Orçamento"])
+        time.sleep(0.4)
+        keyboard.send_keys("{DOWN}")
+        time.sleep(0.4)
+        keyboard.send_keys("{ENTER}")
+        time.sleep(0.4)
+        self._get_image_name("menu_orcamento_novo")
+        time.sleep(2)
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def open_previous_orders_search(self) -> None:
@@ -112,7 +119,7 @@ class AutomotivApp:
         self.logger.info("Abrindo pesquisa de orçamentos anteriores.")
         if self.config.runtime.dry_run:
             return
-        self._send_menu_sequence(["Orçamento", "Orçamento Pesquisar"])
+        self._send_menu_sequence(["Orçamento"])
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
@@ -328,7 +335,7 @@ class AutomotivApp:
     # Estrutura do fluxo de orçamento
     # ================================
 
-    def create_budget_for_items(
+    def criar_orcamento(
         self,
         company_code: str | None,
         items: list[Any],
@@ -338,18 +345,13 @@ class AutomotivApp:
         if self.config.runtime.dry_run:
             return None
 
-        # MAPEAR: botão X da aba do cliente (o mesmo btn_fechar_aba já usado em materiais).
-        # Fecha a aba de Cliente para voltar ao GRV principal antes de abrir o orçamento.
         self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
         time.sleep(3)
 
-        # Abre menu: Orçamento > Orçamento > Novo (ou pressiona F2 se configurado).
-        # MAPEAR: imagens dos itens de menu "menu_orcamento", "menu_orcamento_submenu", "menu_orcamento_novo".
-        self.open_budget_new_screen()
+        self.abrir_novo_orcamento()
 
-        # MAPEAR: clicar na área em branco da grade de itens do orçamento (primeira linha vazia).
-        # É a célula da coluna "Código" na linha 1 da grade de itens.
-        self._click_budget_blank_area()
+        # MAPEAR: campo_codigo_grade_orcamento — célula vazia da coluna "Código" na linha 1 da grade de itens.
+        self._clicar_campo_codigo_grade()
 
         for index, item in enumerate(items, start=1):
             code = getattr(item, "code_or_reference", None) or item.get("code_or_reference")
@@ -357,131 +359,289 @@ class AutomotivApp:
             margin = (margins_by_code or {}).get(str(code), self.config.workflow.default_margin)
 
             self.logger.info("Adicionando item no orçamento: código=%s | quantidade=%s | margem=%s", code, quantity, margin)
-            self._type_budget_item_code(str(code))
-            self._type_budget_item_quantity(str(quantity))
+            self._digitar_codigo_item(str(code))
+            self._digitar_quantidade_item(str(quantity))
             if margin:
-                self._type_budget_item_margin(str(margin))
-            self._go_to_next_budget_item_line(index=index)
+                self._digitar_margem_item(str(margin))
+            self._ir_proxima_linha_grade(index=index)
 
-        return self._fill_budget_data_and_observation(company_code=company_code)
+        return self._preencher_dados_e_observacao(company_code=company_code)
 
-    def _click_budget_blank_area(self) -> None:
-        # MAPEAR: recortar a célula vazia da coluna "Código" na primeira linha da grade de itens.
-        if self._get_image_name("budget_blank_area"):
-            self._click_configured_image_or_fail("budget_blank_area", timeout=10)
-        else:
-            self.logger.warning("Imagem budget_blank_area não configurada. Clique manual/teclado ainda precisa ser ajustado.")
+    def _clicar_campo_codigo_grade(self) -> None:
+        # MAPEAR: campo_codigo_grade_orcamento — recortar a célula da coluna "Código" na 1ª linha da grade.
+        self._click_configured_image_or_fail("campo_codigo_grade_orcamento", timeout=10)
+        self.logger.warning("Clicado na coluna de código de grade")
 
-    def _type_budget_item_code(self, code: str) -> None:
-        # O cursor já está no campo "Código" da linha atual.
-        # Cola o código do material (Ctrl+V) e pressiona ENTER para confirmar e preencher os dados do item.
-        # Após o ENTER o GRV pode exibir um modal de mensagem — tratado por handle_optional_message_modal.
+    def _digitar_codigo_item(self, code: str) -> None:
         pyperclip.copy(code)
         keyboard.send_keys("^v")
         keyboard.send_keys("{ENTER}")
         time.sleep(0.5)
         self.handle_optional_message_modal()
 
-    def _type_budget_item_quantity(self, quantity: str) -> None:
-        # MAPEAR: campo "Quantidade" da linha de item — recortar o campo QTD na grade do orçamento.
-        # Se a imagem não estiver configurada, assume que o foco já está no campo após o ENTER do código.
-        if self._get_image_name("budget_quantity_field"):
-            self._click_configured_image_or_fail("budget_quantity_field", timeout=5)
-        # Seleciona tudo (Ctrl+A) e cola a quantidade (Ctrl+V), depois ENTER para confirmar.
+    def _digitar_quantidade_item(self, quantity: str) -> None:
+        self._click_configured_image_or_fail("campo_quantidade_item", timeout=5)
+        # Ctrl+A seleciona tudo, Ctrl+V cola, ENTER confirma.
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
         pyperclip.copy(str(quantity))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         keyboard.send_keys("{ENTER}")
         time.sleep(0.3)
 
-    def _type_budget_item_margin(self, margin: str) -> None:
-        # MAPEAR: campo "Margem" (ou "% Margem") da linha de item na grade do orçamento.
-        # Se a imagem não estiver configurada, assume que o foco já está no campo após o ENTER da quantidade.
-        if self._get_image_name("budget_margin_field"):
-            self._click_configured_image_or_fail("budget_margin_field", timeout=5)
-        # Seleciona tudo e cola o valor da margem, depois ENTER para confirmar.
+    def _digitar_margem_item(self, margin: str) -> None:
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
         pyperclip.copy(str(margin))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         keyboard.send_keys("{ENTER}")
         time.sleep(0.3)
 
-    def _go_to_next_budget_item_line(self, index: int) -> None:
+    def _ir_proxima_linha_grade(self, index: int) -> None:
         self.logger.info("Indo para próxima linha do orçamento. Linha atual=%s", index)
-        # MAPEAR: botão "+" ou ícone de nova linha da grade de itens do orçamento.
-        # Se não mapeado, usa seta para baixo como fallback (funciona na maioria dos grids GRV).
-        if self._get_image_name("budget_add_next_line_area"):
-            self._click_configured_image_or_fail("budget_add_next_line_area", timeout=5)
-        else:
-            keyboard.send_keys("{DOWN}")
+        keyboard.send_keys("{DOWN}")
         time.sleep(0.4)
 
-    def _fill_budget_data_and_observation(self, company_code: str | None) -> str | None:
+    def _preencher_dados_e_observacao(self, company_code: str | None) -> str | None:
         self.logger.info("Preenchendo dados finais do orçamento e observação.")
 
-        # MAPEAR: aba "Dados" do orçamento (geralmente fica logo abaixo da grade de itens).
-        # Clicar nessa aba para acessar campos como número do pedido do cliente.
-        if self._get_image_name("budget_tab_data"):
-            self._click_configured_image_or_fail("budget_tab_data", timeout=8)
+        self._click_configured_image_or_fail("aba_dados_orcamento", timeout=8)
 
-        # MAPEAR: campo "Nº Pedido" (ou "Pedido do Cliente") dentro da aba Dados.
-        # Cola o texto de observation_placeholder (definido em config.yaml > workflow).
-        if self._get_image_name("budget_order_number_field"):
-            self._click_configured_image_or_fail("budget_order_number_field", timeout=5)
-            pyperclip.copy(self.config.workflow.observation_placeholder)
-            keyboard.send_keys("^a")
-            keyboard.send_keys("^v")
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
+        pyperclip.copy(self.config.workflow.observation_placeholder)
+        keyboard.send_keys("^a")
+        keyboard.send_keys("^v")
 
-        # MAPEAR: aba "Observação" do orçamento (ao lado da aba Dados).
-        if self._get_image_name("budget_tab_observation"):
-            self._click_configured_image_or_fail("budget_tab_observation", timeout=8)
-
-        # MAPEAR: área de texto livre dentro da aba Observação.
-        # Cola o texto de observação (placeholder + transportadora, se encontrada).
-        if self._get_image_name("budget_observation_text_area"):
-            self._click_configured_image_or_fail("budget_observation_text_area", timeout=5)
-            observation = self._build_observation_text(company_code=company_code)
+        self._click_configured_image_or_fail("aba_observacao_orcamento", timeout=8)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
+        
+        # MAPEAR: area_texto_observacao — textarea livre dentro da aba Observação.
+        if self._get_image_name("area_texto_observacao"):
+            self._click_configured_image_or_fail("area_texto_observacao", timeout=5)
+            observation = self._montar_texto_observacao(company_code=company_code)
             pyperclip.copy(observation)
             keyboard.send_keys("^a")
             keyboard.send_keys("^v")
         return None
 
-    def _build_observation_text(self, company_code: str | None) -> str:
-        # Busca o código da transportadora do último pedido deste cliente (ainda não implementado).
-        # Se não encontrar, usa só o texto padrão de observation_placeholder.
-        carrier_code = self.find_carrier_code(company_code=company_code)
+    def _montar_texto_observacao(self, company_code: str | None) -> str:
+        # Busca transportadora do último pedido deste cliente (ainda não implementado).
+        carrier_code = self.buscar_codigo_transportadora(company_code=company_code)
         if not carrier_code:
             return self.config.workflow.observation_placeholder
         return f"{self.config.workflow.observation_placeholder}\nTransportadora: {carrier_code}"
 
-    def find_previous_order_margins(self, company_code: str | None, material_codes: list[str]) -> dict[str, str]:
-        """Estrutura para buscar margens nos pedidos/orçamentos anteriores."""
-        self.logger.info("Buscando margens anteriores para empresa=%s | códigos=%s", company_code, material_codes)
+    def buscar_margens_pedidos_anteriores(
+        self,
+        company_code: str | None,
+        material_codes: list[str],
+        company_name: str | None = None,
+    ) -> dict[str, str]:
+        """Busca margens usadas em orçamentos anteriores deste cliente para os códigos informados."""
+        self.logger.info("Buscando margens anteriores para empresa=%s | nome=%s | códigos=%s", company_code, company_name, material_codes)
         if not company_code or self.config.runtime.dry_run:
             return {}
-        # TODO: Recortar imagens e implementar: Orçamento > pesquisar F5 > todos > código cliente > range.
-        return {}
 
-    def find_carrier_code(self, company_code: str | None) -> str | None:
-        """Estrutura para pegar código da transportadora do último pedido ou cadastro do cliente."""
+        self.open_previous_orders_search()
+        self.press_search_f5()
+        search_term = company_name or company_code
+        self._filtrar_pedidos_anteriores_por_cliente(search_term)
+
+        # Exporta a lista de pedidos encontrados e conta quantas linhas há
+        exported_list = self._export_grid_to_excel(company_code)
+        try:
+            order_count = self._contar_linhas_excel(exported_list)
+        finally:
+            self._delete_file_safely(exported_list)
+
+        if order_count == 0:
+            self.logger.info("Nenhum pedido anterior encontrado para o cliente %s.", company_code)
+            self._fechar_tela_pedidos_anteriores()
+            return {}
+
+        margins: dict[str, str] = {}
+        target_codes = {str(c) for c in material_codes}
+        max_orders = self.config.workflow.previous_orders_max_to_check
+
+        # Posiciona no primeiro item da lista (pedido mais recente)
+        keyboard.send_keys("{HOME}")
+        time.sleep(0.3)
+
+        for order_idx in range(min(order_count, max_orders)):
+            if len(margins) == len(target_codes):
+                break  # já encontrou margem para todos os materiais
+
+            self.logger.info("Abrindo pedido %s/%s para buscar margens.", order_idx + 1, min(order_count, max_orders))
+
+            # ENTER abre o orçamento selecionado na grade de resultados
+            keyboard.send_keys("{ENTER}")
+            time.sleep(1.5)
+
+            exported_items = self._export_grid_to_excel(f"{company_code}_pedido_{order_idx}")
+            try:
+                order_margins = self._ler_margens_do_excel_de_itens(exported_items, target_codes)
+            finally:
+                self._delete_file_safely(exported_items)
+
+            for code, margin in order_margins.items():
+                if code not in margins:
+                    margins[code] = margin
+                    self.logger.info("Margem encontrada: código=%s | margem=%s", code, margin)
+
+            # Fecha o pedido aberto e volta para a lista de resultados
+            self._try_close_dialog()
+            self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+            time.sleep(0.8)
+
+            # Desce para o próximo pedido na lista
+            keyboard.send_keys("{DOWN}")
+            time.sleep(0.3)
+
+        self._fechar_tela_pedidos_anteriores()
+        return margins
+
+    def _filtrar_pedidos_anteriores_por_cliente(self, search_term: str) -> None:
+        # search_term é o Nome Fantasia (preferido) ou código numérico do cliente como fallback.
+        self._click_configured_image_or_fail("filtro_por_cliente", timeout=8)
+        time.sleep(0.4)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.4)
+        keyboard.send_keys("{TAB}")
+        pyperclip.copy(search_term)
+        keyboard.send_keys("^a")
+        keyboard.send_keys("^v")
+        time.sleep(0.3)
+
+        # MAPEAR: previous_orders_date_range_field — campo de data inicial do filtro (formato DD/MM/AAAA).
+        # Preenche com a data de X meses atrás (configurado em workflow.previous_orders_months_back).
+        if self._get_image_name("previous_orders_date_range_field"):
+            self._click_configured_image_or_fail("previous_orders_date_range_field", timeout=8)
+            pyperclip.copy(self._calcular_data_inicio_pesquisa())
+            keyboard.send_keys("^a")
+            keyboard.send_keys("^v")
+            time.sleep(0.3)
+
+        # Dispara a pesquisa
+        keyboard.send_keys("{ENTER}")
+        time.sleep(2)
+
+    def _calcular_data_inicio_pesquisa(self) -> str:
+        from datetime import date
+        months_back = self.config.workflow.previous_orders_months_back
+        today = date.today()
+        month = today.month - (months_back % 12)
+        year = today.year - (months_back // 12)
+        if month <= 0:
+            month += 12
+            year -= 1
+        return f"{today.day:02d}/{month:02d}/{year}"
+
+    def _contar_linhas_excel(self, excel_path: Path) -> int:
+        workbook = load_workbook(excel_path, data_only=True)
+        sheet = workbook.active
+        count = max(0, sheet.max_row - 1)  # -1 para ignorar o cabeçalho
+        workbook.close()
+        return count
+
+    def _ler_margens_do_excel_de_itens(self, excel_path: Path, target_codes: set[str]) -> dict[str, str]:
+        workbook = load_workbook(excel_path, data_only=True)
+        sheet = workbook.active
+        headers = {str(cell.value or "").strip(): cell.column for cell in sheet[1] if cell.value}
+
+        # Tenta localizar a coluna do código do material (padrão GRV com asterisco)
+        code_col = (
+            headers.get("*Código Interno")
+            or headers.get("*Código")
+            or headers.get("Código Interno")
+            or headers.get("Código")
+        )
+        # Tenta localizar a coluna de margem
+        margin_col = (
+            headers.get("*Margem")
+            or headers.get("*% Margem")
+            or headers.get("Margem")
+            or headers.get("% Margem")
+        )
+
+        if not code_col or not margin_col:
+            self.logger.warning(
+                "Colunas de código/margem não encontradas no Excel de itens. Disponíveis: %s",
+                list(headers.keys()),
+            )
+            workbook.close()
+            return {}
+
+        result: dict[str, str] = {}
+        for row in range(2, sheet.max_row + 1):
+            code = str(sheet.cell(row=row, column=code_col).value or "").strip()
+            if code not in target_codes:
+                continue
+            margin_value = sheet.cell(row=row, column=margin_col).value
+            if margin_value is not None and str(margin_value).strip():
+                result[code] = str(margin_value).strip()
+
+        workbook.close()
+        return result
+
+    def _fechar_tela_pedidos_anteriores(self) -> None:
+        self._try_close_dialog()
+        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        time.sleep(0.8)
+
+    def buscar_codigo_transportadora(self, company_code: str | None) -> str | None:
+        """Busca o código da transportadora do último pedido ou aba PADRÕES do cadastro do cliente."""
         self.logger.info("Buscando código da transportadora para empresa=%s", company_code)
         if not company_code or self.config.runtime.dry_run:
             return None
-        # TODO: Implementar após capturar as telas/imagens de pedidos anteriores ou aba PADRÕES do cliente.
+        # TODO: Implementar após capturar telas de pedidos anteriores ou aba PADRÕES do cliente.
         return None
 
-    def save_budget(self) -> None:
+    def gravar_orcamento(self) -> None:
         self.logger.info("Gravando orçamento.")
         if self.config.runtime.dry_run:
             return
-        if self._get_image_name("budget_save_f3_button"):
-            self._click_configured_image_or_fail("budget_save_f3_button", timeout=10)
+        # MAPEAR: botao_gravar_f3 — botão "Gravar" (F3) na barra de ferramentas do orçamento.
+        # Se não mapeado, envia F3 diretamente.
+        if self._get_image_name("botao_gravar_f3"):
+            self._click_configured_image_or_fail("botao_gravar_f3", timeout=10)
         else:
             keyboard.send_keys("{F3}")
         time.sleep(1)
-        self._handle_save_error_until_success()
+        self._tratar_erro_gravacao()
 
-    def _handle_save_error_until_success(self) -> None:
+    def _tratar_erro_gravacao(self) -> None:
         for attempt in range(1, self.config.workflow.save_retry_attempts + 1):
             self.logger.info("Verificando erro de gravação. Tentativa %s", attempt)
             if not self._get_image_name("save_error_modal_ok_button"):
@@ -494,12 +654,13 @@ class AutomotivApp:
             if not clicked:
                 return
             time.sleep(0.5)
-            self.save_budget()
+            self.gravar_orcamento()
 
-    def generate_budget_pdf(self) -> None:
+    def gerar_pdf_orcamento(self) -> None:
         self.logger.info("Gerando PDF do orçamento.")
         if not self.config.workflow.generate_pdf or self.config.runtime.dry_run:
             return
+        # Envia pelo menu: Imprimir > Imprimir Orçamento Padrão.
         self._send_menu_sequence(["Imprimir", "Imprimir Orçamento Padrão"])
         if self._get_image_name("print_ok_button"):
             self.image.click_if_exists(self._get_required_image_name("print_ok_button"), timeout=5, confidence=self._get_confidence())

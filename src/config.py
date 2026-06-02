@@ -82,16 +82,16 @@ class ImagesConfig(BaseModel):
     radio_ativo: str = "radio_ativo.png"
     radio_todos: str = "radio_todos.png"
 
-    budget_blank_area: str = "budget_blank_area.png"
-    budget_quantity_field: str = "budget_quantity_field.png"
-    budget_margin_field: str = "budget_margin_field.png"
-    budget_add_next_line_area: str = "budget_add_next_line_area.png"
-    budget_tab_items: str = "budget_tab_items.png"
-    budget_tab_data: str = "budget_tab_data.png"
-    budget_tab_observation: str = "budget_tab_observation.png"
-    budget_order_number_field: str = "budget_order_number_field.png"
-    budget_observation_text_area: str = "budget_observation_text_area.png"
-    budget_save_f3_button: str = "budget_save_f3_button.png"
+    campo_codigo_grade_orcamento: str = "campo_codigo_grade_orcamento.png"
+    campo_quantidade_item: str = "campo_quantidade_item.png"
+    campo_margem_item: str = "campo_margem_item.png"
+    botao_nova_linha_grade: str = "botao_nova_linha_grade.png"
+    aba_itens_orcamento: str = "aba_itens_orcamento.png"
+    aba_dados_orcamento: str = "aba_dados_orcamento.png"
+    aba_observacao_orcamento: str = "aba_observacao_orcamento.png"
+    campo_numero_pedido: str = "campo_numero_pedido.png"
+    area_texto_observacao: str = "area_texto_observacao.png"
+    botao_gravar_f3: str = "botao_gravar_f3.png"
 
     previous_orders_search_all_checkbox: str = "previous_orders_search_all_checkbox.png"
     previous_orders_client_code_field: str = "previous_orders_client_code_field.png"
@@ -133,6 +133,7 @@ class WorkflowConfig(BaseModel):
     default_margin: str = ""
     observation_placeholder: str = "-"
     previous_orders_months_back: int = 12
+    previous_orders_max_to_check: int = 5
     save_retry_attempts: int = 2
     generate_pdf: bool = True
 

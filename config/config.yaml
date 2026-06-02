@@ -46,6 +46,7 @@ workflow:
   default_margin: ""
   observation_placeholder: "-"
   previous_orders_months_back: 12
+  previous_orders_max_to_check: 5
   save_retry_attempts: 2
   generate_pdf: true
 
@@ -93,17 +94,17 @@ images:
   radio_inativo: "radio_inativo.png"
   radio_todos: "radio_todos.png"
 
-  # Estrutura do fluxo de orçamento. Recorte essas imagens conforme avançar no Windows real.
-  budget_blank_area: "budget_blank_area.png"
-  budget_quantity_field: "budget_quantity_field.png"
-  budget_margin_field: "budget_margin_field.png"
-  budget_add_next_line_area: "budget_add_next_line_area.png"
-  budget_tab_items: "budget_tab_items.png"
-  budget_tab_data: "budget_tab_data.png"
-  budget_tab_observation: "budget_tab_observation.png"
-  budget_order_number_field: "budget_order_number_field.png"
-  budget_observation_text_area: "budget_observation_text_area.png"
-  budget_save_f3_button: "budget_save_f3_button.png"
+  # Imagens do fluxo de orçamento. Recorte cada uma no Windows conforme avançar.
+  campo_codigo_grade_orcamento: "campo_codigo_grade_orcamento.png"
+  campo_quantidade_item: "campo_quantidade_item.png"
+  campo_margem_item: "campo_margem_item.png"
+  botao_nova_linha_grade: "botao_nova_linha_grade.png"
+  aba_itens_orcamento: "aba_itens_orcamento.png"
+  aba_dados_orcamento: "aba_dados_orcamento.png"
+  aba_observacao_orcamento: "aba_observacao_orcamento.png"
+  campo_numero_pedido: "campo_numero_pedido.png"
+  area_texto_observacao: "area_texto_observacao.png"
+  botao_gravar_f3: "botao_gravar_f3.png"
 
   previous_orders_search_all_checkbox: "previous_orders_search_all_checkbox.png"
   previous_orders_client_code_field: "previous_orders_client_code_field.png"

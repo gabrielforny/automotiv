@@ -241,4 +241,32 @@ def read_cnpj_from_excel(excel_path: str | Path, config: ExcelConfig) -> str | N
 
     workbook.close()
     return None
+
+
+def read_company_name_from_excel(excel_path: str | Path, config: ExcelConfig) -> str | None:
+    """Lê o Nome Fantasia (ou Razão Social) do requisitante da planilha.
+
+    Varre as linhas antes do cabeçalho procurando labels 'NOME FANTASIA' ou 'RAZAO SOCIAL'
+    e retorna o valor da primeira célula não-vazia à direita do label encontrado.
+    """
+    path = Path(excel_path)
+    if not path.exists():
+        return None
+
+    workbook = load_workbook(path, data_only=True)
+    sheet = workbook.active
+
+    for row_idx in range(1, config.header_row):
+        for cell in sheet[row_idx]:
+            label = _normalize_header(cell.value)
+            if "FANTASIA" in label or "RAZAO SOCIAL" in label:
+                # Procura a primeira célula não-vazia à direita do label
+                for col_offset in range(1, 20):
+                    value_cell = sheet.cell(row=row_idx, column=cell.column + col_offset)
+                    value = _to_clean_text(value_cell.value)
+                    if value:
+                        workbook.close()
+                        return value
+
+    workbook.close()
     return None
