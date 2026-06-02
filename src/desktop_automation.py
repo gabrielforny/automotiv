@@ -680,7 +680,7 @@ class AutomotivApp:
             return None
         self.press_search_f5()
         self._select_search_by_cpf_cnpj()
-        self._click_configured_image_or_fail("status_todos", timeout=10)
+        self._garantir_radio_todos()
         self._type_search_text(cpf_or_cnpj)
         time.sleep(2)
         code = self._extract_first_client_code(cpf_or_cnpj)
@@ -690,6 +690,20 @@ class AutomotivApp:
     def _select_search_by_cpf_cnpj(self) -> None:
         self._click_configured_image_or_fail("search_by_cnpj_cpf", timeout=10)
         time.sleep(0.5)
+
+    def _garantir_radio_todos(self) -> None:
+        """Garante que o filtro 'Todos' está selecionado na tela de pesquisa.
+
+        O GRV às vezes abre com 'Ativo', às vezes com 'Inativo', às vezes com 'Todos'.
+        Clicar em 'Todos' quando já está selecionado não tem efeito, então é seguro
+        chamar sempre. Se a imagem não for encontrada, apenas loga e segue em frente.
+        """
+        if self._get_image_name("radio_todos"):
+            self._click_configured_image_or_fail("radio_todos", timeout=5)
+            self.logger.info("Filtro 'Todos' selecionado.")
+            time.sleep(0.3)
+        else:
+            self.logger.warning("Imagem 'radio_todos' não encontrada — verifique se está mapeada. Seguindo sem alterar o filtro.")
 
     def _extract_first_client_code(self, cpf_or_cnpj: str) -> str | None:
         self.logger.info("Exportando grid de clientes para Excel.")
