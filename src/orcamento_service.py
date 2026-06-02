@@ -31,11 +31,12 @@ class OrcamentoService:
             return None
 
         material_codes = [result.item.code_or_reference for result in found_results]
-        margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
-            company_code=company_code,
-            material_codes=material_codes,
-            company_name=company_name,
-        )
+        # margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
+        #     company_code=company_code,
+        #     material_codes=material_codes,
+        #     company_name=company_name,
+        # )
+        margins_by_code, carrier_from_orders = {}, None  # TODO: implementar busca real
 
         # Pedidos anteriores têm prioridade sobre a aba PADRÕES (dado mais recente)
         final_carrier = carrier_from_orders or carrier_code
