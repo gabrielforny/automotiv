@@ -733,9 +733,11 @@ class AutomotivApp:
         """Clica na aba PADRÕES do cadastro do cliente, navega até o campo de transportadora e copia."""
         self._click_configured_image_or_fail("aba_padrao_cliente", timeout=8)
         time.sleep(0.5)
-        self._click_configured_image_or_fail("aba_padrao_cliente", timeout=8)
+        self._click_configured_image_or_fail("interrogacao_aba_padrao", timeout=8)
         time.sleep(0.5)
-        for _ in range(18):
+        keyboard.send_keys("{ESC}")
+        time.sleep(0.5)
+        for _ in range(17):
             keyboard.send_keys("{TAB}")
             time.sleep(0.1)
         time.sleep(0.5)

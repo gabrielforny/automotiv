@@ -115,7 +115,8 @@ images:
 
   aba_padrao_cliente: "aba_padrao_cliente.png"
   btn_ok_exportacao: "btn_ok_exportacao.png"
-
+  interrogacao_aba_padrao: "interrogacao_aba_padrao.png"
+  
   carrier_code_field: "carrier_code_field.png"
   carrier_pattern_tab: "carrier_pattern_tab.png"
   print_ok_button: "print_ok_button.png"
