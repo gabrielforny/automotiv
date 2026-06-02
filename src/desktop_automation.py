@@ -450,26 +450,26 @@ class AutomotivApp:
         self.logger.info("Preenchendo dados finais do orçamento e observação.")
 
         self._click_configured_image_or_fail("aba_dados_orcamento", timeout=8)
-
+        time.sleep(3)
         keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
+        time.sleep(2)
         pyperclip.copy(self.config.workflow.observation_placeholder)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
-        time.sleep(0.4)
+        time.sleep(2)
         keyboard.send_keys("{ENTER}")
         time.sleep(2)
+        self.logger.info("Preenchido campo de dados do orçamento.")
         self._click_configured_image_or_fail("aba_observacao_orcamento", timeout=8)
+        time.sleep(2)
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
-        
-        self._click_configured_image_or_fail("area_texto_observacao", timeout=5)
         observation = self._montar_texto_observacao(carrier_code=carrier_code)
-        keyboard.send_keys("{TAB}")
         time.sleep(1)
         pyperclip.copy(observation)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
+        self.logger.info("Preenchido campo de observação do orçamento.")
         return None
 
     def _montar_texto_observacao(self, carrier_code: str | None) -> str:
@@ -492,13 +492,10 @@ class AutomotivApp:
         if not company_code or self.config.runtime.dry_run:
             return {}, None
 
-        if not company_name:
-            self.logger.warning("company_name não informado — não é possível filtrar pedidos anteriores por cliente. Pulando busca de margens.")
-            return {}, None
-
         self.open_previous_orders_search()
         self.press_search_f5()
-        self._filtrar_pedidos_anteriores_por_cliente(company_name)
+        search_term = company_name or company_code
+        self._filtrar_pedidos_anteriores_por_cliente(search_term)
 
         exported_list = self._export_grid_to_excel(company_code)
         try:
