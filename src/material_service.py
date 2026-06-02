@@ -62,6 +62,9 @@ class MaterialService:
                     "Material não encontrado no GRV: %s. Pesquisando no site.",
                     item.code_or_reference,
                 )
+
+                self.app.fechar_janela_para_buscar_site()  # Fecha a tela de materiais para liberar o foco.
+
                 site_material = self.site_service.search(item.code_or_reference)
 
                 if site_material:

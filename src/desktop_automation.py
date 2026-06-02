@@ -173,6 +173,15 @@ class AutomotivApp:
         self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
         time.sleep(1)
 
+    def fechar_janela_para_buscar_site(self) -> None:
+        self.logger.info("Fechando janela atual para liberar foco e buscar no site.")
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        time.sleep(3)
+        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        time.sleep(3)
+        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        time.sleep(3)
+
     def _try_close_dialog(self) -> None:
         image_name = self._get_image_name("btn_fechar_janela")
         if image_name:
