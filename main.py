@@ -60,15 +60,22 @@ def run_cli(args: argparse.Namespace) -> None:
 
     # Busca o código interno do cliente no GRV após processar os materiais.
     client_code = None
+    carrier_code = None
+    company_name = None
     if cnpj:
         cliente_service = ClienteService(app, logger)
-        client_code = cliente_service.find_client_code(cnpj)
-        logger.info("Código do cliente retornado: %s", client_code)
+        client_code, carrier_code, company_name = cliente_service.find_client_code(cnpj)
+        logger.info("Cliente: código=%s | transportadora=%s | nome=%s", client_code, carrier_code, company_name)
 
     budget_number = None
     if config.workflow.enable_budget_flow:
         orcamento_service = OrcamentoService(app, logger)
-        budget_number = orcamento_service.create_from_material_results(material_results, company_code=client_code)
+        budget_number = orcamento_service.create_from_material_results(
+            material_results,
+            company_code=client_code,
+            company_name=company_name,
+            carrier_code=carrier_code,
+        )
         logger.info("Orçamento retornado/gerado: %s", budget_number)
     else:
         logger.info("Fluxo de orçamento desabilitado em workflow.enable_budget_flow=false.")
