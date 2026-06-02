@@ -109,7 +109,7 @@ class AutomotivApp:
         keyboard.send_keys("{DOWN}")
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
-        time.sleep(0.4)
+        time.sleep(5)
         self._get_image_name("menu_orcamento_novo")
         time.sleep(2)
         time.sleep(self.config.app.wait_after_open_screen_seconds)
