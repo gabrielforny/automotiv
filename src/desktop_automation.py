@@ -492,10 +492,13 @@ class AutomotivApp:
         if not company_code or self.config.runtime.dry_run:
             return {}, None
 
+        if not company_name:
+            self.logger.warning("company_name não informado — não é possível filtrar pedidos anteriores por cliente. Pulando busca de margens.")
+            return {}, None
+
         self.open_previous_orders_search()
         self.press_search_f5()
-        search_term = company_name or company_code
-        self._filtrar_pedidos_anteriores_por_cliente(search_term)
+        self._filtrar_pedidos_anteriores_por_cliente(company_name)
 
         exported_list = self._export_grid_to_excel(company_code)
         try:
