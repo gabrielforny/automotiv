@@ -168,8 +168,6 @@ class AutomotivApp:
         self.logger.info("Fechando tela atual.")
         if self.config.runtime.dry_run:
             return
-        # Tenta fechar diálogos abertos (F5/busca). Se a imagem não for encontrada
-        # usa ESC, que fecha qualquer diálogo sem errar se não houver nenhum aberto.
         self._try_close_dialog()
         self._try_close_dialog()
         self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
@@ -196,12 +194,8 @@ class AutomotivApp:
         return clicked
 
     def _try_close_dialog(self) -> None:
-        image_name = self._get_image_name("btn_fechar_janela")
-        if image_name:
-            clicked = self.image.click(image_name=image_name, timeout=3, confidence=self._get_confidence())
-            if clicked:
-                time.sleep(0.8)
-                return
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        time.sleep(0.8)
         keyboard.send_keys("{ESC}")
         time.sleep(0.8)
 
