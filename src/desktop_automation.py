@@ -115,7 +115,7 @@ class AutomotivApp:
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def open_previous_orders_search(self) -> None:
-        """Estrutura para: Orçamento > Orçamento > Pesquisar F5."""
+        """Abre Orçamento > Orçamento e clica em Pesquisar."""
         self.logger.info("Abrindo pesquisa de orçamentos anteriores.")
         if self.config.runtime.dry_run:
             return
@@ -125,6 +125,8 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
         time.sleep(8)
+        self._tentar_clicar_imagem("menu_orcamento_pesquisar")
+        time.sleep(2)
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
@@ -512,7 +514,6 @@ class AutomotivApp:
             return {}, None
 
         self.open_previous_orders_search()
-        self.press_search_f5()
         search_term = company_name or company_code
         self._filtrar_pedidos_anteriores_por_cliente(search_term)
 

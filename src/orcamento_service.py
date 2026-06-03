@@ -35,12 +35,11 @@ class OrcamentoService:
             "carrier_code recebido do PADRÕES: %r | company_code=%r | company_name=%r",
             carrier_code, company_code, company_name,
         )
-        # margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
-        #     company_code=company_code,
-        #     material_codes=material_codes,
-        #     company_name=company_name,
-        # )
-        margins_by_code, carrier_from_orders = {}, None  # busca de pedidos anteriores pendente
+        margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
+            company_code=company_code,
+            material_codes=material_codes,
+            company_name=company_name,
+        )
 
         # Pedidos anteriores têm prioridade; se não houver, usa o da aba PADRÕES
         final_carrier = carrier_from_orders or carrier_code
