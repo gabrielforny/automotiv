@@ -125,9 +125,8 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
         time.sleep(8)
-        self._tentar_clicar_imagem("menu_orcamento_pesquisar")
-        time.sleep(2)
-        time.sleep(self.config.app.wait_after_open_screen_seconds)
+        self._tentar_clicar_imagem("menu_orcamento_novo")
+        time.sleep(5)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
         for label in labels:
@@ -571,31 +570,23 @@ class AutomotivApp:
 
     def _filtrar_pedidos_anteriores_por_cliente(self, search_term: str) -> None:
         # search_term é o Nome Fantasia (preferido) ou código numérico do cliente como fallback.
-        self._tentar_clicar_imagem("filtro_por_cliente", timeout=8)
+        self._tentar_clicar_imagem("pesquisar_orcamento_anterior", timeout=8)
+        time.sleep(4)
+        self._tentar_clicar_imagem("filtro_por_nome", timeout=8)
+        time.sleep(3)
+        self._garantir_radio_todos()
+        time.sleep(2)
+        self._garantir_radio_contendo()
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
-        keyboard.send_keys("{TAB}")
         pyperclip.copy(search_term)
         time.sleep(0.4)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
-        time.sleep(0.3)
-
-        # MAPEAR: previous_orders_date_range_field — campo de data inicial do filtro (formato DD/MM/AAAA).
-        # Preenche com a data de X meses atrás (configurado em workflow.previous_orders_months_back).
-        if self._get_image_name("previous_orders_date_range_field"):
-            self._tentar_clicar_imagem("previous_orders_date_range_field", timeout=8)
-            pyperclip.copy(self._calcular_data_inicio_pesquisa())
-            keyboard.send_keys("^a")
-            keyboard.send_keys("^v")
-            time.sleep(0.3)
-
-        # Dispara a pesquisa
-        keyboard.send_keys("{ENTER}")
-        time.sleep(2)
+        time.sleep(1)
 
     def _calcular_data_inicio_pesquisa(self) -> str:
         from datetime import date
@@ -767,6 +758,14 @@ class AutomotivApp:
     def _select_search_by_cpf_cnpj(self) -> None:
         self._tentar_clicar_imagem("search_by_cnpj_cpf", timeout=10)
         time.sleep(0.5)
+
+    def _garantir_radio_contendo(self) -> None:
+        if self._get_image_name("radio_contendo"):
+            self._tentar_clicar_imagem("radio_contendo", timeout=5)
+            self.logger.info("Filtro 'Contendo' selecionado.")
+            time.sleep(0.3)
+        else:
+            self.logger.warning("Imagem 'radio_contendo' não encontrada — verifique se está mapeada. Seguindo sem alterar o filtro.")
 
     def _garantir_radio_todos(self) -> None:
         """Garante que o filtro 'Todos' está selecionado na tela de pesquisa.
