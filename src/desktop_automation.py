@@ -154,12 +154,14 @@ class AutomotivApp:
 
     def press_search_f5(self) -> None:
         self.logger.info("Abrindo pesquisa com F5.")
-        if self.config.runtime.dry_run:
-            return
-        if self._get_image_name("search_f5_button"):
+        try:
             self._click_configured_image_or_fail("search_f5_button", timeout=10)
-        else:
-            keyboard.send_keys("{F5}")
+            self.logger.info("Clique no botão de pesquisa por imagem realizado com sucesso.")
+        except Exception:
+            if self._get_image_name("search_f5_button"):
+                self._click_configured_image_or_fail("search_f5_button", timeout=10)
+            else:
+                keyboard.send_keys("{F5}")
         time.sleep(1)
 
     def close_current_screen(self) -> None:
