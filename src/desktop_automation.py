@@ -177,12 +177,23 @@ class AutomotivApp:
 
     def fechar_janela_para_buscar_site(self) -> None:
         self.logger.info("Fechando janela atual para liberar foco e buscar no site.")
-        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
         time.sleep(3)
-        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
         time.sleep(3)
-        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
         time.sleep(3)
+
+    def _tentar_clicar_imagem(self, image_key: str, timeout: int = 5) -> bool:
+        """Clica na imagem se ela aparecer. Retorna True se clicou, False se não encontrou — sem lançar erro."""
+        image_name = self._get_image_name(image_key)
+        if not image_name:
+            self.logger.info("Imagem '%s' não configurada, pulando.", image_key)
+            return False
+        clicked = self.image.click(image_name=image_name, timeout=timeout, confidence=self._get_confidence())
+        if not clicked:
+            self.logger.info("Imagem '%s' não encontrada na tela, pulando.", image_key)
+        return clicked
 
     def _try_close_dialog(self) -> None:
         image_name = self._get_image_name("btn_fechar_janela")
