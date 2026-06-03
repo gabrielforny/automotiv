@@ -77,7 +77,7 @@ class AutomotivApp:
 
     def click_login(self) -> None:
         self.logger.info("Clicando no botão LOGIN por imagem.")
-        self._click_configured_image_or_fail("login_button", timeout=15)
+        self._tentar_clicar_imagem("login_button", timeout=15)
         self.logger.info("Clique no botão LOGIN realizado com sucesso por imagem.")
 
     def open_materials_screen(self) -> None:
@@ -110,7 +110,7 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
         time.sleep(8)
-        self._click_configured_image_or_fail("menu_orcamento_novo")
+        self._tentar_clicar_imagem("menu_orcamento_novo")
         time.sleep(2)
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
@@ -133,7 +133,7 @@ class AutomotivApp:
             image_name = self._get_image_name(image_key)
             if image_name:
                 self.logger.info("Clicando menu '%s' por imagem '%s'.", label, image_name)
-                self._click_configured_image_or_fail(image_key, timeout=12)
+                self._tentar_clicar_imagem(image_key, timeout=12)
                 time.sleep(0.8)
                 continue
             self.logger.info("Imagem do menu '%s' não configurada. Tentando por controle Windows.", label)
@@ -155,11 +155,11 @@ class AutomotivApp:
     def press_search_f5(self) -> None:
         self.logger.info("Abrindo pesquisa com F5.")
         try:
-            self._click_configured_image_or_fail("search_f5_button", timeout=10)
+            self._tentar_clicar_imagem("search_f5_button", timeout=10)
             self.logger.info("Clique no botão de pesquisa por imagem realizado com sucesso.")
         except Exception:
             if self._get_image_name("search_f5_button"):
-                self._click_configured_image_or_fail("search_f5_button", timeout=10)
+                self._tentar_clicar_imagem("search_f5_button", timeout=10)
             else:
                 keyboard.send_keys("{F5}")
         time.sleep(1)
@@ -170,7 +170,7 @@ class AutomotivApp:
             return
         self._try_close_dialog()
         self._try_close_dialog()
-        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
         time.sleep(1)
 
     def fechar_janela_para_buscar_site(self) -> None:
@@ -225,7 +225,7 @@ class AutomotivApp:
 
     def _select_search_by_code_internal(self) -> None:
         if self._get_image_name("search_by_codigo_interno"):
-            self._click_configured_image_or_fail("search_by_codigo_interno", timeout=10)
+            self._tentar_clicar_imagem("search_by_codigo_interno", timeout=10)
             return
         keyboard.send_keys("{TAB}")
         keyboard.send_keys("{HOME}")
@@ -251,7 +251,7 @@ class AutomotivApp:
     def _click_search_button(self) -> None:
         if self._get_image_name("search_button"):
             try:
-                self._click_configured_image_or_fail("search_button", timeout=5)
+                self._tentar_clicar_imagem("search_button", timeout=5)
                 return
             except Exception as exc:
                 self.logger.info("Não consegui clicar pesquisar por imagem; usando ENTER: %s", exc)
@@ -300,7 +300,7 @@ class AutomotivApp:
             return
         try:
             if self.image.exists(self._get_required_image_name("modal_duplicado"), timeout=2, confidence=self._get_confidence()):
-                self._click_configured_image_or_fail("button_ok_duplicad", timeout=5)
+                self._tentar_clicar_imagem("button_ok_duplicad", timeout=5)
         except Exception as exc:
             self.logger.info("Sem confirmação de substituição ou não consegui validar: %s", exc)
 
@@ -367,7 +367,7 @@ class AutomotivApp:
         if self.config.runtime.dry_run:
             return None
 
-        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
         time.sleep(3)
 
         self.abrir_novo_orcamento()
@@ -393,12 +393,12 @@ class AutomotivApp:
         return self._preencher_dados_e_observacao(carrier_code=carrier_code)
 
     def _clicar_campo_codigo_grade(self) -> None:
-        self._click_configured_image_or_fail("campo_codigo_grade_orcamento", timeout=10)
+        self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=10)
         time.sleep(3)
         try:
-            self._click_configured_image_or_fail("lupa_dentro_selecao", timeout=10)
+            self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=10)
         except Exception as exc:
-            self._click_configured_image_or_fail("lupa_fora_selecao", timeout=10)
+            self._tentar_clicar_imagem("lupa_fora_selecao", timeout=10)
         time.sleep(2)
         keyboard.send_keys("{ESC}")
         time.sleep(2)
@@ -465,9 +465,9 @@ class AutomotivApp:
     def _preencher_dados_e_observacao(self, carrier_code: str | None = None) -> str | None:
         self.logger.info("Preenchendo dados finais do orçamento e observação. carrier_code=%r", carrier_code)
 
-        self._click_configured_image_or_fail("aba_dados_orcamento", timeout=8)
+        self._tentar_clicar_imagem("aba_dados_orcamento", timeout=8)
         time.sleep(3)
-        self._click_configured_image_or_fail("icone_obrigatorio", timeout=8)
+        self._tentar_clicar_imagem("icone_obrigatorio", timeout=8)
         time.sleep(2)
         pyperclip.copy(self.config.workflow.observation_placeholder)
         keyboard.send_keys("^a")
@@ -476,9 +476,9 @@ class AutomotivApp:
         keyboard.send_keys("{ENTER}")
         time.sleep(2)
         self.logger.info("Preenchido campo de dados do orçamento.")
-        self._click_configured_image_or_fail("aba_observacao_orcamento", timeout=8)
+        self._tentar_clicar_imagem("aba_observacao_orcamento", timeout=8)
         time.sleep(2)
-        self._click_configured_image_or_fail("icone_obrigatorio", timeout=8)
+        self._tentar_clicar_imagem("icone_obrigatorio", timeout=8)
         time.sleep(2)
         observation = self._montar_texto_observacao(carrier_code=carrier_code)
         self.logger.info("Texto da observação a ser preenchida:\n%s", observation)
@@ -560,7 +560,7 @@ class AutomotivApp:
                 self.logger.info("Código de transportadora encontrado no pedido %s: %s", order_idx + 1, carrier_code)
 
             self._try_close_dialog()
-            self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+            self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
             time.sleep(0.8)
             keyboard.send_keys("{DOWN}")
             time.sleep(0.3)
@@ -570,7 +570,7 @@ class AutomotivApp:
 
     def _filtrar_pedidos_anteriores_por_cliente(self, search_term: str) -> None:
         # search_term é o Nome Fantasia (preferido) ou código numérico do cliente como fallback.
-        self._click_configured_image_or_fail("filtro_por_cliente", timeout=8)
+        self._tentar_clicar_imagem("filtro_por_cliente", timeout=8)
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
@@ -586,7 +586,7 @@ class AutomotivApp:
         # MAPEAR: previous_orders_date_range_field — campo de data inicial do filtro (formato DD/MM/AAAA).
         # Preenche com a data de X meses atrás (configurado em workflow.previous_orders_months_back).
         if self._get_image_name("previous_orders_date_range_field"):
-            self._click_configured_image_or_fail("previous_orders_date_range_field", timeout=8)
+            self._tentar_clicar_imagem("previous_orders_date_range_field", timeout=8)
             pyperclip.copy(self._calcular_data_inicio_pesquisa())
             keyboard.send_keys("^a")
             keyboard.send_keys("^v")
@@ -670,7 +670,7 @@ class AutomotivApp:
 
     def _fechar_tela_pedidos_anteriores(self) -> None:
         self._try_close_dialog()
-        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
         time.sleep(0.8)
 
     def buscar_codigo_transportadora(self, company_code: str | None) -> str | None:
@@ -683,7 +683,7 @@ class AutomotivApp:
 
     def gravar_orcamento(self) -> None:
         self.logger.info("Gravando orçamento.")
-        self._click_configured_image_or_fail("botao_gravar_f3", timeout=10)
+        self._tentar_clicar_imagem("botao_gravar_f3", timeout=10)
         time.sleep(1)
         self._tratar_erro_gravacao(True)
         time.sleep(2)
@@ -746,24 +746,24 @@ class AutomotivApp:
         if code:
             self._fechar_confirmacao_exportacao()
             carrier_code = self._ler_codigo_transportadora_aba_padrao()
-        self._click_configured_image_or_fail("btn_fechar_aba", timeout=5)
+        self._tentar_clicar_imagem("btn_fechar_aba", timeout=5)
         return code, carrier_code, company_name
 
     def _fechar_confirmacao_exportacao(self) -> None:
         """Fecha o diálogo de confirmação pós-exportação, mantendo o modal de pesquisa aberto."""
-        self._click_configured_image_or_fail("btn_fechar_janela", timeout=5)
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=5)
         time.sleep(5)
         if self._get_image_name("btn_ok_exportacao"):
-            self._click_configured_image_or_fail("btn_ok_exportacao", timeout=5)
+            self._tentar_clicar_imagem("btn_ok_exportacao", timeout=5)
         else:
             keyboard.send_keys("{ENTER}")
         time.sleep(0.5)
 
     def _ler_codigo_transportadora_aba_padrao(self) -> str | None:
         """Clica na aba PADRÕES do cadastro do cliente, navega até o campo de transportadora e copia."""
-        self._click_configured_image_or_fail("aba_padrao_cliente", timeout=8)
+        self._tentar_clicar_imagem("aba_padrao_cliente", timeout=8)
         time.sleep(0.5)
-        self._click_configured_image_or_fail("interrogacao_aba_padrao", timeout=8)
+        self._tentar_clicar_imagem("interrogacao_aba_padrao", timeout=8)
         time.sleep(0.5)
         keyboard.send_keys("{ESC}")
         time.sleep(0.5)
@@ -779,7 +779,7 @@ class AutomotivApp:
         return value or None
 
     def _select_search_by_cpf_cnpj(self) -> None:
-        self._click_configured_image_or_fail("search_by_cnpj_cpf", timeout=10)
+        self._tentar_clicar_imagem("search_by_cnpj_cpf", timeout=10)
         time.sleep(0.5)
 
     def _garantir_radio_todos(self) -> None:
@@ -790,7 +790,7 @@ class AutomotivApp:
         chamar sempre. Se a imagem não for encontrada, apenas loga e segue em frente.
         """
         if self._get_image_name("radio_todos"):
-            self._click_configured_image_or_fail("radio_todos", timeout=5)
+            self._tentar_clicar_imagem("radio_todos", timeout=5)
             self.logger.info("Filtro 'Todos' selecionado.")
             time.sleep(0.3)
         else:
@@ -852,15 +852,15 @@ class AutomotivApp:
     def close_app(self) -> None:
         """Fecha a janela do GRV para liberar o foco antes de abrir o navegador."""
         self.logger.info("Fechando aplicação GRV.")
-        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
         time.sleep(1)
-        self._click_configured_image_or_fail("btn_fechar_janela", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
         time.sleep(1)
-        self._click_configured_image_or_fail("btn_fechar_aba", timeout=10)
+        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
         time.sleep(3)
-        self._click_configured_image_or_fail("btn_sair_grv", timeout=10)
+        self._tentar_clicar_imagem("btn_sair_grv", timeout=10)
         time.sleep(1)
-        self._click_configured_image_or_fail("btn_sair_do_sistema", timeout=10)
+        self._tentar_clicar_imagem("btn_sair_do_sistema", timeout=10)
         time.sleep(3)
         self.app = None
 
