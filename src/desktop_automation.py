@@ -691,23 +691,9 @@ class AutomotivApp:
     def _tratar_erro_gravacao(self, is_gravar: bool) -> None:
         for attempt in range(1, self.config.workflow.save_retry_attempts + 1):
             self.logger.info("Verificando erro de gravação. Tentativa %s", attempt)
-            if not self._get_image_name("save_error_modal_ok_button"):
-                return
-            clicked = self.image.click_if_exists(
-                self._get_required_image_name("save_error_modal_ok_button"),
-                timeout=2,
-                confidence=self._get_confidence(),
-            )
+            self._tentar_clicar_imagem("save_error_modal_ok_button", timeout=10)
             time.sleep(3)
-            if not self._get_image_name("save_error_modal_ok_button"):
-                return
-            clicked = self.image.click_if_exists(
-                self._get_required_image_name("save_error_modal_ok_button"),
-                timeout=2,
-                confidence=self._get_confidence(),
-            )
-            if not clicked:
-                return
+            self._tentar_clicar_imagem("save_error_modal_ok_button", timeout=10)
             time.sleep(0.5)
             if is_gravar:
                 self.logger.info("Tentando gravar novamente após erro.")
@@ -719,8 +705,7 @@ class AutomotivApp:
         time.sleep(2)
         self._tratar_erro_gravacao(False)
         time.sleep(2)
-        if self._get_image_name("print_ok_button"):
-            self.image.click_if_exists(self._get_required_image_name("print_ok_button"), timeout=5, confidence=self._get_confidence())
+        self._tentar_clicar_imagem("print_ok_button", timeout=10)
 
     # ================================
     # Cliente
