@@ -111,6 +111,10 @@ images:
   lupa_dentro_selecao: "lupa_dentro_selecao.png"
   lupa_fora_selecao: "lupa_fora_selecao.png"
 
+  btn_limpar_filtro_ja_feito: "btn_limpar_filtro_ja_feito.PNG"
+  confirmar_pesquisa_muitos_itens: "confirmar_pesquisa_muitos_itens.PNG"
+  click_ok_pesquisa_itens: "click_ok_pesquisa_itens.PNG"
+
   previous_orders_search_all_checkbox: "previous_orders_search_all_checkbox.png"
   previous_orders_client_code_field: "previous_orders_client_code_field.png"
   previous_orders_date_range_field: "previous_orders_date_range_field.png"
