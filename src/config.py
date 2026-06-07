@@ -115,6 +115,7 @@ class ImagesConfig(BaseModel):
     site_result_found: str = "site_result_found.png"
     site_result_code_area: str = "site_result_code_area.png"
 
+    filtrar_por_codigo: str = "filtrar_por_codigo.png"
 
 class SiteSearchConfig(BaseModel):
     wait_after_open_seconds: float = 3.0

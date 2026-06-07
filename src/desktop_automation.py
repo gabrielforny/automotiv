@@ -125,7 +125,7 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
         time.sleep(8)
-        self._tentar_clicar_imagem("menu_orcamento_novo")
+        self._tentar_clicar_imagem("search_f5_button", timeout=10)
         time.sleep(5)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
@@ -500,93 +500,236 @@ class AutomotivApp:
     def buscar_margens_pedidos_anteriores(
         self,
         company_code: str | None,
-        material_codes: list[str],
+        material_items: dict[str, str | None],  # {code: descricao_ou_none}
         company_name: str | None = None,
     ) -> tuple[dict[str, str], str | None]:
-        """Busca margens e código de transportadora em orçamentos anteriores do cliente.
+        """Busca margens e transportadora em orçamentos anteriores do cliente.
 
-        Retorna (margins_by_code, carrier_code). O carrier_code vem do pedido mais recente
-        que contenha essa informação; se não encontrado em nenhum pedido, retorna None.
+        Retorna (margins_by_code, carrier_code).
         """
-        self.logger.info("Buscando margens anteriores para empresa=%s | nome=%s | códigos=%s", company_code, company_name, material_codes)
+        self.logger.info(
+            "Buscando margens anteriores para empresa=%s | nome=%s | itens=%s",
+            company_code, company_name, list(material_items.keys()),
+        )
         if not company_code or self.config.runtime.dry_run:
             return {}, None
 
         self.open_previous_orders_search()
-        search_term = company_name or company_code
-        self._filtrar_pedidos_anteriores_por_cliente(search_term)
+        self._filtrar_pedidos_anteriores_por_cliente()
 
         exported_list = self._export_grid_to_excel(company_code)
         try:
-            order_count = self._contar_linhas_excel(exported_list)
+            pedidos = self._ler_pedidos_do_excel_exportado(exported_list, company_code)
         finally:
             self._delete_file_safely(exported_list)
 
-        if order_count == 0:
+        if not pedidos:
             self.logger.info("Nenhum pedido anterior encontrado para o cliente %s.", company_code)
             self._fechar_tela_pedidos_anteriores()
             return {}, None
 
         margins: dict[str, str] = {}
         carrier_code: str | None = None
-        target_codes = {str(c) for c in material_codes}
         max_orders = self.config.workflow.previous_orders_max_to_check
 
-        keyboard.send_keys("{HOME}")
-        time.sleep(0.3)
-
-        for order_idx in range(min(order_count, max_orders)):
-            if len(margins) == len(target_codes) and carrier_code:
+        for order_idx, (n_orcamento, transportadora_pedido) in enumerate(pedidos[:max_orders]):
+            target_remaining = {c for c in material_items if c not in margins}
+            if not target_remaining and carrier_code:
                 break
 
-            self.logger.info("Abrindo pedido %s/%s para buscar margens.", order_idx + 1, min(order_count, max_orders))
-            keyboard.send_keys("{ENTER}")
-            time.sleep(1.5)
+            self.logger.info(
+                "Pedido %s/%s: N=%s | transportadora=%s | itens restantes=%s",
+                order_idx + 1, min(len(pedidos), max_orders),
+                n_orcamento, transportadora_pedido, target_remaining,
+            )
 
-            exported_items = self._export_grid_to_excel(f"{company_code}_pedido_{order_idx}")
-            try:
-                order_margins, order_carrier = self._ler_margens_do_excel_de_itens(exported_items, target_codes)
-            finally:
-                self._delete_file_safely(exported_items)
+            found_carrier = self._buscar_margens_em_pedido(
+                n_orcamento=n_orcamento,
+                transportadora_pedido=transportadora_pedido,
+                material_items=material_items,
+                margins=margins,
+            )
 
-            for code, margin in order_margins.items():
-                if code not in margins:
-                    margins[code] = margin
-                    self.logger.info("Margem encontrada: código=%s | margem=%s", code, margin)
+            if found_carrier and not carrier_code:
+                carrier_code = found_carrier
 
-            # Usa o carrier do pedido mais recente (primeiro encontrado)
-            if not carrier_code and order_carrier:
-                carrier_code = order_carrier
-                self.logger.info("Código de transportadora encontrado no pedido %s: %s", order_idx + 1, carrier_code)
-
-            self._try_close_dialog()
-            self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
-            time.sleep(0.8)
-            keyboard.send_keys("{DOWN}")
-            time.sleep(0.3)
+            # Passo 12: restaura lista de pedidos clicando em pesquisar para próxima iteração
+            is_last_order = order_idx >= min(len(pedidos), max_orders) - 1
+            still_has_targets = bool({c for c in material_items if c not in margins})
+            if not is_last_order and still_has_targets:
+                self._tentar_clicar_imagem("menu_orcamento_pesquisar", timeout=10)
+                time.sleep(3)
 
         self._fechar_tela_pedidos_anteriores()
         return margins, carrier_code
 
-    def _filtrar_pedidos_anteriores_por_cliente(self, search_term: str) -> None:
-        # search_term é o Nome Fantasia (preferido) ou código numérico do cliente como fallback.
-        self._tentar_clicar_imagem("pesquisar_orcamento_anterior", timeout=8)
-        time.sleep(4)
-        self._tentar_clicar_imagem("filtro_por_nome", timeout=8)
-        time.sleep(3)
-        self._garantir_radio_todos()
-        time.sleep(2)
-        self._garantir_radio_contendo()
-        time.sleep(0.4)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
-        pyperclip.copy(search_term)
-        time.sleep(0.4)
+    def _ler_pedidos_do_excel_exportado(
+        self, excel_path: Path, company_code: str
+    ) -> list[tuple[str, str | None]]:
+        """Lê o Excel exportado de orçamentos e filtra pelo Cód. Cliente (coluna 25).
+
+        Colunas por posição (1-indexed):
+          1  = N orçamento
+          4  = Cliente
+          11 = Código da Transportadora
+          25 = Cód. Cliente (usado para filtrar)
+        """
+        workbook = load_workbook(excel_path, data_only=True)
+        sheet = workbook.active
+        pedidos: list[tuple[str, str | None]] = []
+        cod_alvo = str(company_code).strip()
+
+        for row in range(2, sheet.max_row + 1):
+            cod_cliente = str(sheet.cell(row=row, column=25).value or "").strip()
+            if cod_cliente != cod_alvo:
+                continue
+            n_orcamento = str(sheet.cell(row=row, column=1).value or "").strip()
+            transportadora = str(sheet.cell(row=row, column=11).value or "").strip() or None
+            if n_orcamento:
+                pedidos.append((n_orcamento, transportadora))
+
+        workbook.close()
+        self.logger.info(
+            "Pedidos do cliente %s: %s encontrado(s): %s",
+            company_code, len(pedidos), [p[0] for p in pedidos],
+        )
+        return pedidos
+
+    def _buscar_margens_em_pedido(
+        self,
+        n_orcamento: str,
+        transportadora_pedido: str | None,
+        material_items: dict[str, str | None],
+        margins: dict[str, str],
+    ) -> str | None:
+        """Abre um pedido anterior e extrai margens dos itens alvo comparando por descrição.
+
+        Muta `margins` com os valores encontrados.
+        Retorna transportadora_pedido se ao menos uma margem foi salva, None caso contrário.
+        """
+        self.logger.info("Processando pedido N=%s | transportadora=%s.", n_orcamento, transportadora_pedido)
+        target_codes = {c for c in material_items if c not in margins}
+
+        # Passo 1: fechar janela atual (lista de orçamentos)
+        self.close_current_screen()
+        time.sleep(1)
+
+        # Passo 2: filtrar por código de orçamento
+        self._tentar_clicar_imagem("filtrar_por_codigo", timeout=10)
+        time.sleep(1)
+
+        # Passo 3: TAB × 3 para chegar ao campo do N do orçamento
+        for _ in range(3):
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.2)
+
+        # Passo 4: digitar N do orçamento
+        pyperclip.copy(str(n_orcamento))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
+        time.sleep(0.5)
+
+        # Passo 5: pesquisar
+        self._tentar_clicar_imagem("search_button", timeout=8)
+        time.sleep(2)
+
+        # Passo 6: exportar para verificar se há itens na grade
+        temp_file = self._export_grid_to_excel(f"pedido_{n_orcamento}_check")
+        try:
+            row_count = self._contar_linhas_excel(temp_file)
+        finally:
+            self._delete_file_safely(temp_file)
+
+        self.logger.info("Pedido %s: %s linha(s) na grade.", n_orcamento, row_count)
+
+        # Passo 7: fechar janela atual
+        self.close_current_screen()
         time.sleep(1)
+
+        if row_count == 0:
+            self.logger.info("Pedido %s sem itens. Pulando.", n_orcamento)
+            return None
+
+        # Passo 8: confirmar seleção (OK)
+        self._tentar_clicar_imagem("btn_ok_modal", timeout=8)
+        # Passo 9: aguardar carregamento do pedido
+        time.sleep(3)
+
+        # Passo 10: percorrer grade de itens buscando itens alvo
+        carrier_found: str | None = None
+
+        # 10.1 - posicionar no campo código da grade (igual a _clicar_campo_codigo_grade)
+        self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=10)
+        time.sleep(2)
+
+        for row_idx in range(row_count):
+            if not target_codes:
+                break
+
+            # 10.2 - clicar na lupa e copiar descrição da coluna seguinte
+            clicked = self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=5)
+            if not clicked:
+                self._tentar_clicar_imagem("lupa_fora_selecao", timeout=5)
+            time.sleep(0.5)
+
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.3)
+            keyboard.send_keys("^a")
+            keyboard.send_keys("^c")
+            time.sleep(0.3)
+            description_on_screen = pyperclip.paste().strip()
+            keyboard.send_keys("{ESC}")
+            time.sleep(0.5)
+
+            self.logger.info("Pedido %s | linha %s: descrição=%r", n_orcamento, row_idx + 1, description_on_screen)
+
+            matched_code: str | None = None
+            for code in list(target_codes):
+                desc = material_items.get(code)
+                if desc and desc.strip().lower() == description_on_screen.lower():
+                    matched_code = code
+                    break
+
+            if matched_code:
+                # 10.3 - TAB × 16 → coluna Margem de Lucro → copiar valor
+                for _ in range(16):
+                    keyboard.send_keys("{TAB}")
+                    time.sleep(0.1)
+                time.sleep(0.3)
+                keyboard.send_keys("^a")
+                keyboard.send_keys("^c")
+                time.sleep(0.3)
+                margin = pyperclip.paste().strip()
+                if margin:
+                    margins[matched_code] = margin
+                    if transportadora_pedido and not carrier_found:
+                        carrier_found = transportadora_pedido
+                    self.logger.info(
+                        "Margem extraída: código=%s | margem=%s | transportadora=%s",
+                        matched_code, margin, carrier_found,
+                    )
+                target_codes.discard(matched_code)
+
+            # Próxima linha da grade
+            if row_idx < row_count - 1:
+                keyboard.send_keys("{DOWN}")
+                time.sleep(0.3)
+
+        # Fechar o pedido aberto
+        self.close_current_screen()
+        time.sleep(1)
+
+        return carrier_found
+
+    def _filtrar_pedidos_anteriores_por_cliente(self) -> None:
+        self._tentar_clicar_imagem("btn_limpar_filtro_ja_feito", timeout=8)
+        time.sleep(2)
+        self._tentar_clicar_imagem("search_button", timeout=8)
+        time.sleep(2)
+        self._tentar_clicar_imagem("confirmar_pesquisa_muitos_itens", timeout=8)
+        time.sleep(0.5)
+        self._tentar_clicar_imagem("click_ok_pesquisa_itens", timeout=8)
+        time.sleep(7)
 
     def _calcular_data_inicio_pesquisa(self) -> str:
         from datetime import date
@@ -605,60 +748,6 @@ class AutomotivApp:
         count = max(0, sheet.max_row - 1)  # -1 para ignorar o cabeçalho
         workbook.close()
         return count
-
-    def _ler_margens_do_excel_de_itens(self, excel_path: Path, target_codes: set[str]) -> dict[str, str]:
-        workbook = load_workbook(excel_path, data_only=True)
-        sheet = workbook.active
-        headers = {str(cell.value or "").strip(): cell.column for cell in sheet[1] if cell.value}
-
-        # Tenta localizar a coluna do código do material (padrão GRV com asterisco)
-        code_col = (
-            headers.get("*Código Interno")
-            or headers.get("*Código")
-            or headers.get("Código Interno")
-            or headers.get("Código")
-        )
-        # Tenta localizar a coluna de margem
-        margin_col = (
-            headers.get("*Margem")
-            or headers.get("*% Margem")
-            or headers.get("Margem")
-            or headers.get("% Margem")
-        )
-
-        carrier_col = (
-            headers.get("*Transportadora")
-            or headers.get("Transportadora")
-            or headers.get("*Cód. Transportadora")
-            or headers.get("Cód. Transportadora")
-            or headers.get("*Cod. Transportadora")
-            or headers.get("Cod. Transportadora")
-        )
-
-        if not code_col or not margin_col:
-            self.logger.warning(
-                "Colunas de código/margem não encontradas no Excel de itens. Disponíveis: %s",
-                list(headers.keys()),
-            )
-            workbook.close()
-            return {}, None
-
-        result: dict[str, str] = {}
-        carrier_code: str | None = None
-        for row in range(2, sheet.max_row + 1):
-            code = str(sheet.cell(row=row, column=code_col).value or "").strip()
-            if carrier_col and not carrier_code:
-                cv = str(sheet.cell(row=row, column=carrier_col).value or "").strip()
-                if cv:
-                    carrier_code = cv
-            if code not in target_codes:
-                continue
-            margin_value = sheet.cell(row=row, column=margin_col).value
-            if margin_value is not None and str(margin_value).strip():
-                result[code] = str(margin_value).strip()
-
-        workbook.close()
-        return result, carrier_code
 
     def _fechar_tela_pedidos_anteriores(self) -> None:
         self._try_close_dialog()

@@ -73,6 +73,8 @@ images:
   menu_imprimir: "menu_imprimir.png"
   menu_imprimir_orcamento_padrao: "menu_imprimir_orcamento_padrao.png"
 
+  filtrar_por_codigo: "filtrar_por_codigo.PNG"
+
   search_button: "botao_pesquisar.png"
   search_f5_button: "search_f5_button.png"
   search_by_codigo_interno: "search_by_codigo_interno.png"

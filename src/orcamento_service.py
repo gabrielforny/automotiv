@@ -30,17 +30,20 @@ class OrcamentoService:
             self.logger.warning("Nenhum material encontrado. Não vou iniciar orçamento.")
             return None
 
-        material_codes = [result.item.code_or_reference for result in found_results]
+        # {code: descricao} — descrição vem do Excel de materiais exportado (coluna *Item)
+        material_items: dict[str, str | None] = {
+            result.item.code_or_reference: (result.material.get("item") if result.material else None)
+            for result in found_results
+        }
         self.logger.info(
-            "carrier_code recebido do PADRÕES: %r | company_code=%r | company_name=%r",
-            carrier_code, company_code, company_name,
+            "carrier_code recebido do PADRÕES: %r | company_code=%r | company_name=%r | itens=%s",
+            carrier_code, company_code, company_name, material_items,
         )
-        # margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
-        #     company_code=company_code,
-        #     material_codes=material_codes,
-        #     company_name=company_name,
-        # )
-        margins_by_code, carrier_from_orders = {}, None  # MOCK: para seguir o fluxo sem a parte de pedidos anteriores pronta.
+        margins_by_code, carrier_from_orders = self.app.buscar_margens_pedidos_anteriores(
+            company_code=company_code,
+            material_items=material_items,
+            company_name=company_name,
+        )
 
         # Pedidos anteriores têm prioridade; se não houver, usa o da aba PADRÕES
         final_carrier = carrier_from_orders or carrier_code
