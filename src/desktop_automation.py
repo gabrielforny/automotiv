@@ -247,7 +247,7 @@ class AutomotivApp:
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         time.sleep(2)
-        self._click_search_button()
+        keyboard.send_keys("{ENTER}")
 
     def _click_search_button(self) -> None:
         if self._get_image_name("search_button"):
@@ -630,7 +630,7 @@ class AutomotivApp:
         time.sleep(0.5)
 
         # Passo 5: pesquisar
-        self._tentar_clicar_imagem("search_button", timeout=8)
+        keyboard.send_keys("{ENTER}")
         time.sleep(2)
 
         # Passo 6: exportar para verificar se há itens na grade
@@ -724,7 +724,7 @@ class AutomotivApp:
     def _filtrar_pedidos_anteriores_por_cliente(self) -> None:
         self._tentar_clicar_imagem("btn_limpar_filtro_ja_feito", timeout=8)
         time.sleep(2)
-        self._tentar_clicar_imagem("search_button", timeout=8)
+        keyboard.send_keys("{ENTER}")
         time.sleep(2)
         self._tentar_clicar_imagem("confirmar_pesquisa_muitos_itens", timeout=8)
         time.sleep(0.5)
