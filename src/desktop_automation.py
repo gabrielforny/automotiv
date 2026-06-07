@@ -99,7 +99,7 @@ class AutomotivApp:
         keyboard.send_keys("{ENTER}")
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
-    def abrir_novo_orcamento(self) -> None:
+    def abrir_novo_orcamento(self, company_name: str | None = None) -> None:
         """Menu: Orçamento > Orçamento > Novo (F2)."""
         self.logger.info("Abrindo Orçamento > Orçamento - F2/novo.")
         if self.config.runtime.dry_run:
@@ -112,6 +112,14 @@ class AutomotivApp:
         time.sleep(8)
         self._tentar_clicar_imagem("menu_orcamento_novo")
         time.sleep(2)
+        if company_name:
+            self.logger.info("Digitando nome do cliente no orçamento: %s", company_name)
+            pyperclip.copy(company_name)
+            keyboard.send_keys("^a")
+            keyboard.send_keys("^v")
+            time.sleep(0.3)
+            keyboard.send_keys("{ENTER}")
+            time.sleep(1)
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def open_previous_orders_search(self) -> None:
@@ -363,15 +371,16 @@ class AutomotivApp:
         items: list[Any],
         margins_by_code: dict[str, str] | None = None,
         carrier_code: str | None = None,
+        company_name: str | None = None,
     ) -> str | None:
-        self.logger.info("Iniciando criação de orçamento para empresa=%s | itens=%s", company_code, len(items))
+        self.logger.info("Iniciando criação de orçamento para empresa=%s | nome=%s | itens=%s", company_code, company_name, len(items))
         if self.config.runtime.dry_run:
             return None
 
         self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
         time.sleep(3)
 
-        self.abrir_novo_orcamento()
+        self.abrir_novo_orcamento(company_name=company_name)
 
         time.sleep(5)
         self._clicar_campo_codigo_grade()

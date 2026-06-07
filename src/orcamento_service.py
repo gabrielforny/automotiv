@@ -54,6 +54,7 @@ class OrcamentoService:
 
         budget_number = self.app.criar_orcamento(
             company_code=company_code,
+            company_name=company_name,
             items=[result.item for result in found_results],
             margins_by_code=margins_by_code,
             carrier_code=final_carrier,
