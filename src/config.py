@@ -61,7 +61,7 @@ class ImagesConfig(BaseModel):
     menu_imprimir: str = "menu_imprimir.png"
     menu_imprimir_orcamento_padrao: str = "menu_imprimir_orcamento_padrao.png"
 
-    search_button: str = "botao_pesquisar.png"
+    search_button: str = "search_button.png"
     search_f5_button: str = "search_f5_button.png"
     search_by_codigo_interno: str = "search_by_codigo_interno.png"
     search_by_cnpj_cpf: str = "search_by_cnpj_cpf.png"

@@ -75,7 +75,7 @@ images:
 
   filtrar_por_codigo: "filtrar_por_codigo.PNG"
 
-  search_button: "botao_pesquisar.png"
+  search_button: "search_button.png"
   search_f5_button: "search_f5_button.png"
   search_by_codigo_interno: "search_by_codigo_interno.png"
   search_by_cnpj_cpf: "search_by_cnpj_cpf.png"
