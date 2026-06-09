@@ -620,7 +620,7 @@ class AutomotivApp:
         target_codes = {c for c in material_items if c not in margins}
 
         # Passo 1: fechar janela atual (lista de orçamentos)
-        self.close_current_screen()
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
         time.sleep(1)
 
         # Passo 2: filtrar por código de orçamento
