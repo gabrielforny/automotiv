@@ -49,7 +49,7 @@ workflow:
   previous_orders_max_to_check: 5
   save_retry_attempts: 2
   generate_pdf: true
-  export_excel_pedidos_offset_x: 30
+  export_excel_pedidos_offset_x: 60
 
 site_search:
   wait_after_open_seconds: 3

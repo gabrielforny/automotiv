@@ -148,7 +148,7 @@ class WorkflowConfig(BaseModel):
     save_retry_attempts: int = 2
     generate_pdf: bool = True
     # Offset em pixels do ícone âncora até o botão Excel na toolbar de pedidos
-    export_excel_pedidos_offset_x: int = 30
+    export_excel_pedidos_offset_x: int = 60
 
 
 class BotConfig(BaseModel):
