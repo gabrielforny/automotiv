@@ -682,63 +682,50 @@ class AutomotivApp:
         # Passo 7: percorrer grade de itens buscando itens alvo
         carrier_found: str | None = None
 
-        # 7.1 - garantir aba Itens ativa e posicionar na primeira célula da grade
-        # NÃO clicamos em campo_codigo_grade_orcamento pois o clique nessa imagem
-        # aciona a lupa dentro do campo código, abrindo um popup de busca indesejado.
+        # 7.1 - garantir aba Itens ativa e posicionar na primeira linha da grade
         self._tentar_clicar_imagem("aba_itens_orcamento", timeout=10)
         time.sleep(1)
-        # DOWN move o foco da aba para a primeira linha da grade; HOME vai à 1ª coluna
         keyboard.send_keys("{DOWN}")
         time.sleep(0.3)
         keyboard.send_keys("{HOME}")
         time.sleep(0.3)
 
-        _SENTINEL = "__LENDO_CELULA__"
+        _SENTINEL = "__LENDO_CODIGO__"
         _MAX_ROWS = 200
         for row_idx in range(_MAX_ROWS):
             if not target_codes:
                 break
 
-            # 7.2 - TAB → coluna Descrição; tenta ler via F2 + Ctrl+A+C + Esc
-            keyboard.send_keys("{TAB}")
-            time.sleep(0.3)
+            # 7.2 - Clicar na lupa do Cód. Interno: abre popup com o código já selecionado
+            lupa_clicked = self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=5)
+            if not lupa_clicked:
+                self.logger.info("Pedido %s | linha %s: lupa não encontrada, fim da grade.", n_orcamento, row_idx + 1)
+                break
+            time.sleep(0.8)
 
+            # 7.3 - Ler o código interno do campo selecionado no popup
             pyperclip.copy(_SENTINEL)
             time.sleep(0.1)
-            keyboard.send_keys("{F2}")
-            time.sleep(0.2)
             keyboard.send_keys("^a")
             keyboard.send_keys("^c")
             time.sleep(0.3)
-            keyboard.send_keys("{ESCAPE}")
-            time.sleep(0.1)
-            description_on_screen = pyperclip.paste().strip()
+            codigo_on_screen = pyperclip.paste().strip()
 
-            # Fallback sem F2 caso o modo edição não tenha sido ativado
-            if description_on_screen == _SENTINEL:
-                pyperclip.copy(_SENTINEL)
-                time.sleep(0.1)
-                keyboard.send_keys("^a")
-                keyboard.send_keys("^c")
-                time.sleep(0.3)
-                description_on_screen = pyperclip.paste().strip()
-
-            if not description_on_screen or description_on_screen == _SENTINEL:
-                self.logger.info("Pedido %s | linha %s: descrição vazia/ilegível, fim da grade.", n_orcamento, row_idx + 1)
-                keyboard.send_keys("{HOME}")
+            if not codigo_on_screen or codigo_on_screen == _SENTINEL:
+                self.logger.info("Pedido %s | linha %s: código vazio/ilegível, fim da grade.", n_orcamento, row_idx + 1)
+                keyboard.send_keys("{ESCAPE}")
                 break
 
-            self.logger.info("Pedido %s | linha %s: descrição=%r", n_orcamento, row_idx + 1, description_on_screen)
+            self.logger.info("Pedido %s | linha %s: código=%r", n_orcamento, row_idx + 1, codigo_on_screen)
 
-            matched_code: str | None = None
-            for code in list(target_codes):
-                desc = material_items.get(code)
-                if desc and desc.strip().lower() == description_on_screen.lower():
-                    matched_code = code
-                    break
+            # Fechar o popup antes de qualquer navegação
+            keyboard.send_keys("{ESCAPE}")
+            time.sleep(0.3)
+
+            matched_code = codigo_on_screen if codigo_on_screen in target_codes else None
 
             if matched_code:
-                # 7.3 - TAB × 15 → Margem de Lucro (16 total desde Cód. Interno, já demos 1)
+                # 7.4 - TAB × 15 → Margem de Lucro (ajustar conforme colunas reais)
                 for _ in range(15):
                     keyboard.send_keys("{TAB}")
                     time.sleep(0.1)
@@ -773,19 +760,14 @@ class AutomotivApp:
                     )
                 else:
                     self.logger.warning(
-                        "Pedido %s | linha %s: margem ilegível via clipboard para código=%s",
+                        "Pedido %s | linha %s: margem ilegível para código=%s",
                         n_orcamento, row_idx + 1, matched_code,
                     )
                 target_codes.discard(matched_code)
-                # HOME volta direto à 1ª coluna (Cód. Interno) sem contar SHIFT+TABs
-                keyboard.send_keys("{HOME}")
-                time.sleep(0.2)
-            else:
-                self.logger.info("Pedido %s | linha %s: descrição não bate: %r", n_orcamento, row_idx + 1, description_on_screen)
                 keyboard.send_keys("{HOME}")
                 time.sleep(0.2)
 
-            # DOWN → próxima linha (permanece na coluna Cód. Interno)
+            # DOWN → próxima linha (mantém foco na coluna Cód. Interno via HOME já feito ou posição natural)
             keyboard.send_keys("{DOWN}")
             time.sleep(0.3)
 
