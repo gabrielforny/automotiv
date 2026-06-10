@@ -49,6 +49,7 @@ workflow:
   previous_orders_max_to_check: 5
   save_retry_attempts: 2
   generate_pdf: true
+  export_excel_pedidos_offset_x: 30
 
 site_search:
   wait_after_open_seconds: 3
@@ -81,7 +82,7 @@ images:
   search_by_cnpj_cpf: "search_by_cnpj_cpf.png"
 
   export_excel_button: "export_excel_button.png"
-  export_excel_pedidos: "export_excel_pedidos.PNG"
+  export_excel_pedidos_anchor: "export_excel_pedidos_anchor.PNG"
   btn_fechar_janela: "btn_fechar_janela.png"
   btn_fechar_aba: "btn_fechar_aba.png"
   btn_sair_grv: "btn_sair_grv.png"

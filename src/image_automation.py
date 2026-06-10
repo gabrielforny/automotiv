@@ -109,6 +109,21 @@ class ImageAutomation:
     def wait_until_visible(self, image_name: str | Path, timeout: int = 10, confidence: Optional[float] = None) -> bool:
         return self.exists(image_name=image_name, timeout=timeout, confidence=confidence)
 
+    def click_with_offset(
+        self,
+        image_name: str | Path,
+        offset_x: int = 0,
+        offset_y: int = 0,
+        timeout: int = 10,
+        confidence: float | None = None,
+    ) -> bool:
+        """Localiza a imagem e clica com deslocamento em pixels a partir do centro."""
+        center = self.locate_center(image_name=image_name, timeout=timeout, confidence=confidence)
+        if not center:
+            return False
+        pyautogui.click(x=center.x + offset_x, y=center.y + offset_y)
+        return True
+
     def click_or_raise(
         self,
         image_name: str | Path,

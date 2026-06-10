@@ -275,13 +275,25 @@ class AutomotivApp:
         return export_path
 
     def _click_export_excel_button(self, image_key: str = "export_excel_button") -> None:
-        self.logger.info("Clicando no botão de exportar Excel inferior (imagem=%s).", image_key)
-        image_name = self._get_image_name(image_key)
-        if not image_name:
-            raise RuntimeError(f"Imagem '{image_key}' não configurada.")
-        clicked = self.image.click_bottommost(image_name=image_name, timeout=10, confidence=self._get_confidence())
+        self.logger.info("Clicando no botão de exportar Excel (imagem=%s).", image_key)
+        # Modo âncora: localiza o ícone âncora e clica N pixels à direita para atingir o Excel
+        if image_key == "export_excel_pedidos":
+            anchor_name = self._get_image_name("export_excel_pedidos_anchor")
+            if not anchor_name:
+                raise RuntimeError("Imagem 'export_excel_pedidos_anchor' não configurada.")
+            clicked = self.image.click_with_offset(
+                image_name=anchor_name,
+                offset_x=self.config.workflow.export_excel_pedidos_offset_x,
+                timeout=10,
+                confidence=self._get_confidence(),
+            )
+        else:
+            image_name = self._get_image_name(image_key)
+            if not image_name:
+                raise RuntimeError(f"Imagem '{image_key}' não configurada.")
+            clicked = self.image.click_bottommost(image_name=image_name, timeout=10, confidence=self._get_confidence())
         if not clicked:
-            raise RuntimeError(f"Não consegui clicar no botão Excel inferior ({image_key}).")
+            raise RuntimeError(f"Não consegui clicar no botão Excel ({image_key}).")
         time.sleep(1)
 
     def _save_exported_excel_dialog(self, expected_code: str, timeout: int = 15) -> Path:

@@ -116,6 +116,7 @@ class ImagesConfig(BaseModel):
     site_result_code_area: str = "site_result_code_area.png"
 
     filtrar_por_codigo: str = "filtrar_por_codigo.png"
+    export_excel_pedidos_anchor: str = "export_excel_pedidos_anchor.PNG"
 
 class SiteSearchConfig(BaseModel):
     wait_after_open_seconds: float = 3.0
@@ -145,6 +146,8 @@ class WorkflowConfig(BaseModel):
     previous_orders_max_to_check: int = 5
     save_retry_attempts: int = 2
     generate_pdf: bool = True
+    # Offset em pixels do ícone âncora até o botão Excel na toolbar de pedidos
+    export_excel_pedidos_offset_x: int = 30
 
 
 class BotConfig(BaseModel):
