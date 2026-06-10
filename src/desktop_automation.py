@@ -678,27 +678,50 @@ class AutomotivApp:
         # Passo 7: percorrer grade de itens buscando itens alvo
         carrier_found: str | None = None
 
-        # 7.1 - posicionar no campo Cód. Interno da primeira linha da grade
-        self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=10)
-        time.sleep(2)
+        # 7.1 - garantir aba Itens ativa e posicionar na primeira célula da grade
+        # NÃO clicamos em campo_codigo_grade_orcamento pois o clique nessa imagem
+        # aciona a lupa dentro do campo código, abrindo um popup de busca indesejado.
+        self._tentar_clicar_imagem("aba_itens_orcamento", timeout=10)
+        time.sleep(1)
+        # DOWN move o foco da aba para a primeira linha da grade; HOME vai à 1ª coluna
+        keyboard.send_keys("{DOWN}")
+        time.sleep(0.3)
+        keyboard.send_keys("{HOME}")
+        time.sleep(0.3)
 
-        _MAX_ROWS = 200  # teto de segurança — sai mais cedo se target_codes esvaziar ou grade acabar
+        _SENTINEL = "__LENDO_CELULA__"
+        _MAX_ROWS = 200
         for row_idx in range(_MAX_ROWS):
             if not target_codes:
                 break
 
-            # 7.2 - TAB → coluna Descrição; copia o conteúdo
+            # 7.2 - TAB → coluna Descrição; tenta ler via F2 + Ctrl+A+C + Esc
             keyboard.send_keys("{TAB}")
             time.sleep(0.3)
+
+            pyperclip.copy(_SENTINEL)
+            time.sleep(0.1)
+            keyboard.send_keys("{F2}")
+            time.sleep(0.2)
             keyboard.send_keys("^a")
             keyboard.send_keys("^c")
             time.sleep(0.3)
+            keyboard.send_keys("{ESCAPE}")
+            time.sleep(0.1)
             description_on_screen = pyperclip.paste().strip()
 
-            if not description_on_screen:
-                self.logger.info("Pedido %s | linha %s: descrição vazia, fim da grade.", n_orcamento, row_idx + 1)
-                keyboard.send_keys("+{TAB}")  # volta ao Cód. Interno antes de sair
-                time.sleep(0.2)
+            # Fallback sem F2 caso o modo edição não tenha sido ativado
+            if description_on_screen == _SENTINEL:
+                pyperclip.copy(_SENTINEL)
+                time.sleep(0.1)
+                keyboard.send_keys("^a")
+                keyboard.send_keys("^c")
+                time.sleep(0.3)
+                description_on_screen = pyperclip.paste().strip()
+
+            if not description_on_screen or description_on_screen == _SENTINEL:
+                self.logger.info("Pedido %s | linha %s: descrição vazia/ilegível, fim da grade.", n_orcamento, row_idx + 1)
+                keyboard.send_keys("{HOME}")
                 break
 
             self.logger.info("Pedido %s | linha %s: descrição=%r", n_orcamento, row_idx + 1, description_on_screen)
@@ -716,13 +739,27 @@ class AutomotivApp:
                     keyboard.send_keys("{TAB}")
                     time.sleep(0.1)
                 time.sleep(0.3)
+
+                pyperclip.copy(_SENTINEL)
+                time.sleep(0.1)
+                keyboard.send_keys("{F2}")
+                time.sleep(0.2)
                 keyboard.send_keys("^a")
                 keyboard.send_keys("^c")
                 time.sleep(0.3)
+                keyboard.send_keys("{ESCAPE}")
+                time.sleep(0.1)
                 margin = pyperclip.paste().strip()
-                self.logger.info("Pedido %s | linha %s: código=%s bate com descrição e tem margem=%s",
-                                 n_orcamento, row_idx + 1, matched_code, margin)
-                if margin:
+
+                if margin == _SENTINEL:
+                    pyperclip.copy(_SENTINEL)
+                    time.sleep(0.1)
+                    keyboard.send_keys("^a")
+                    keyboard.send_keys("^c")
+                    time.sleep(0.3)
+                    margin = pyperclip.paste().strip()
+
+                if margin and margin != _SENTINEL:
                     margins[matched_code] = margin
                     if transportadora_pedido and not carrier_found:
                         carrier_found = transportadora_pedido
@@ -730,18 +767,18 @@ class AutomotivApp:
                         "Margem extraída: código=%s | margem=%s | transportadora=%s",
                         matched_code, margin, carrier_found,
                     )
+                else:
+                    self.logger.warning(
+                        "Pedido %s | linha %s: margem ilegível via clipboard para código=%s",
+                        n_orcamento, row_idx + 1, matched_code,
+                    )
                 target_codes.discard(matched_code)
-                # Volta ao Cód. Interno: 16 SHIFT+TABs (1 descrição + 15 até margem)
-                for _ in range(16):
-                    self.logger.info("Pedido %s | linha %s: voltando para coluna Cód. Interno após processar item com código=%s",
-                                     n_orcamento, row_idx + 1, matched_code)
-                    keyboard.send_keys("+{TAB}")
-                    time.sleep(0.1)
+                # HOME volta direto à 1ª coluna (Cód. Interno) sem contar SHIFT+TABs
+                keyboard.send_keys("{HOME}")
+                time.sleep(0.2)
             else:
-                # Não bateu — volta 1 SHIFT+TAB ao Cód. Interno
-                self.logger.info("Pedido %s | linha %s: descrição não bate com nenhum código restante: %r",
-                                 n_orcamento, row_idx + 1, description_on_screen)
-                keyboard.send_keys("+{TAB}")
+                self.logger.info("Pedido %s | linha %s: descrição não bate: %r", n_orcamento, row_idx + 1, description_on_screen)
+                keyboard.send_keys("{HOME}")
                 time.sleep(0.2)
 
             # DOWN → próxima linha (permanece na coluna Cód. Interno)
