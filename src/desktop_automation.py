@@ -266,22 +266,22 @@ class AutomotivApp:
                 self.logger.info("Não consegui clicar pesquisar por imagem; usando ENTER: %s", exc)
         keyboard.send_keys("{ENTER}")
 
-    def _export_grid_to_excel(self, expected_code: str) -> Path:
+    def _export_grid_to_excel(self, expected_code: str, image_key: str = "export_excel_button") -> Path:
         self.logger.info("Exportando resultado da grid para Excel.")
-        self._click_export_excel_button()
+        self._click_export_excel_button(image_key=image_key)
         export_path = self._save_exported_excel_dialog(expected_code)
         self._wait_until_file_is_ready(export_path, timeout=self.config.export.wait_timeout_seconds)
         self.logger.info("Arquivo exportado pronto em: %s", export_path)
         return export_path
 
-    def _click_export_excel_button(self) -> None:
-        self.logger.info("Clicando no botão de exportar Excel inferior.")
-        image_name = self._get_image_name("export_excel_button")
+    def _click_export_excel_button(self, image_key: str = "export_excel_button") -> None:
+        self.logger.info("Clicando no botão de exportar Excel inferior (imagem=%s).", image_key)
+        image_name = self._get_image_name(image_key)
         if not image_name:
-            raise RuntimeError("Imagem 'export_excel_button' não configurada.")
+            raise RuntimeError(f"Imagem '{image_key}' não configurada.")
         clicked = self.image.click_bottommost(image_name=image_name, timeout=10, confidence=self._get_confidence())
         if not clicked:
-            raise RuntimeError("Não consegui clicar no botão Excel inferior.")
+            raise RuntimeError(f"Não consegui clicar no botão Excel inferior ({image_key}).")
         time.sleep(1)
 
     def _save_exported_excel_dialog(self, expected_code: str, timeout: int = 15) -> Path:
@@ -526,7 +526,7 @@ class AutomotivApp:
         self.open_previous_orders_search()
         self._filtrar_pedidos_anteriores_por_cliente()
 
-        exported_list = self._export_grid_to_excel(company_code)
+        exported_list = self._export_grid_to_excel(company_code, image_key="export_excel_pedidos")
         try:
             pedidos = self._ler_pedidos_do_excel_exportado(exported_list, company_code)
         finally:
@@ -643,7 +643,7 @@ class AutomotivApp:
         time.sleep(2)
 
         # Passo 6: exportar para verificar se há itens na grade
-        temp_file = self._export_grid_to_excel(f"pedido_{n_orcamento}_check")
+        temp_file = self._export_grid_to_excel(f"pedido_{n_orcamento}_check", image_key="export_excel_pedidos")
         try:
             row_count = self._contar_linhas_excel(temp_file)
         finally:
