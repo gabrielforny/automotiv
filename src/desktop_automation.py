@@ -191,6 +191,13 @@ class AutomotivApp:
         self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
         time.sleep(3)
 
+    def _image_esta_visivel(self, image_key: str, timeout: int = 3) -> bool:
+        """Verifica se a imagem está na tela sem clicar. Retorna True se encontrou, False caso contrário."""
+        image_name = self._get_image_name(image_key)
+        if not image_name:
+            return False
+        return self.image.exists(image_name=image_name, timeout=timeout, confidence=self._get_confidence())
+
     def _tentar_clicar_imagem(self, image_key: str, timeout: int = 5) -> bool:
         """Clica na imagem se ela aparecer. Retorna True se clicou, False se não encontrou — sem lançar erro."""
         image_name = self._get_image_name(image_key)
@@ -538,6 +545,12 @@ class AutomotivApp:
         self.open_previous_orders_search()
         self._filtrar_pedidos_anteriores_por_cliente()
 
+        time.sleep(3)
+        if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
+            self.logger.info("Nenhum pedido anterior para o cliente %s (sem dados na busca).", company_code)
+            self._fechar_tela_pedidos_anteriores()
+            return {}, None
+
         exported_list = self._export_grid_to_excel(company_code, image_key="export_excel_pedidos")
         try:
             pedidos = self._ler_pedidos_do_excel_exportado(exported_list, company_code)
@@ -650,47 +663,37 @@ class AutomotivApp:
         keyboard.send_keys("^v")
         time.sleep(0.5)
 
-        # Passo 5: pesquisar
+        # Passo 5: pesquisar e verificar resultado
         keyboard.send_keys("{ENTER}")
-        time.sleep(2)
-
-        # Passo 6: exportar para verificar se há itens na grade
-        temp_file = self._export_grid_to_excel(f"pedido_{n_orcamento}_check", image_key="export_excel_pedidos")
-        try:
-            row_count = self._contar_linhas_excel(temp_file)
-        finally:
-            self._delete_file_safely(temp_file)
-
-        self.logger.info("Pedido %s: %s linha(s) na grade.", n_orcamento, row_count)
-
-        # Passo 7: fechar janela atual
-        self.close_current_screen()
-        time.sleep(1)
-
-        if row_count == 0:
-            self.logger.info("Pedido %s sem itens. Pulando.", n_orcamento)
-            return None
-
-        # Passo 8: confirmar seleção (OK)
-        self._tentar_clicar_imagem("btn_ok_modal", timeout=8)
-        # Passo 9: aguardar carregamento do pedido
         time.sleep(3)
 
-        # Passo 10: percorrer grade de itens buscando itens alvo
+        if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
+            self.logger.info("Pedido %s não encontrado na busca (sem dados). Pulando.", n_orcamento)
+            return None
+
+        # Passo 6: abrir o único resultado com ENTER (não precisa exportar — sabemos que existe)
+        keyboard.send_keys("{ENTER}")
+        time.sleep(3)
+
+        # Passo 7: percorrer grade de itens buscando itens alvo
         carrier_found: str | None = None
 
-        # 10.1 - posicionar no campo código da grade (igual a _clicar_campo_codigo_grade)
+        # 7.1 - posicionar no campo código da grade
         self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=10)
         time.sleep(2)
 
-        for row_idx in range(row_count):
+        _MAX_ROWS = 200  # teto de segurança — sai mais cedo se target_codes esvaziar
+        for row_idx in range(_MAX_ROWS):
             if not target_codes:
                 break
 
-            # 10.2 - clicar na lupa e copiar descrição da coluna seguinte
+            # 7.2 - clicar na lupa e copiar descrição da coluna seguinte
             clicked = self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=5)
             if not clicked:
-                self._tentar_clicar_imagem("lupa_fora_selecao", timeout=5)
+                clicked = self._tentar_clicar_imagem("lupa_fora_selecao", timeout=5)
+            if not clicked:
+                self.logger.info("Pedido %s | linha %s: lupa não encontrada, fim da grade.", n_orcamento, row_idx + 1)
+                break
             time.sleep(0.5)
 
             keyboard.send_keys("{TAB}")
@@ -712,7 +715,7 @@ class AutomotivApp:
                     break
 
             if matched_code:
-                # 10.3 - TAB × 16 → coluna Margem de Lucro → copiar valor
+                # 7.3 - TAB × 16 → coluna Margem de Lucro → copiar valor
                 for _ in range(16):
                     keyboard.send_keys("{TAB}")
                     time.sleep(0.1)
@@ -731,10 +734,8 @@ class AutomotivApp:
                     )
                 target_codes.discard(matched_code)
 
-            # Próxima linha da grade
-            if row_idx < row_count - 1:
-                keyboard.send_keys("{DOWN}")
-                time.sleep(0.3)
+            keyboard.send_keys("{DOWN}")
+            time.sleep(0.3)
 
         # Fechar o pedido aberto
         self.close_current_screen()

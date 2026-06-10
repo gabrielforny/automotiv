@@ -117,6 +117,7 @@ class ImagesConfig(BaseModel):
 
     filtrar_por_codigo: str = "filtrar_por_codigo.png"
     export_excel_pedidos_anchor: str = "export_excel_pedidos_anchor.PNG"
+    sem_dados_na_busca: str = "sem_dados_na_busca.PNG"
 
 class SiteSearchConfig(BaseModel):
     wait_after_open_seconds: float = 3.0
