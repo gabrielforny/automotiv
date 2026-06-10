@@ -226,7 +226,11 @@ class AutomotivApp:
         self._set_material_status()
         time.sleep(1)
         self._type_search_text(code_or_reference)
-        time.sleep(2)
+        time.sleep(3)
+
+        if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
+            self.logger.info("Material %s não encontrado (sem dados na busca).", code_or_reference)
+            return None
 
         exported_file = self._export_grid_to_excel(code_or_reference)
         try:
