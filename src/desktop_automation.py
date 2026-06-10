@@ -678,32 +678,28 @@ class AutomotivApp:
         # Passo 7: percorrer grade de itens buscando itens alvo
         carrier_found: str | None = None
 
-        # 7.1 - posicionar no campo código da grade
+        # 7.1 - posicionar no campo Cód. Interno da primeira linha da grade
         self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=10)
         time.sleep(2)
 
-        _MAX_ROWS = 200  # teto de segurança — sai mais cedo se target_codes esvaziar
+        _MAX_ROWS = 200  # teto de segurança — sai mais cedo se target_codes esvaziar ou grade acabar
         for row_idx in range(_MAX_ROWS):
             if not target_codes:
                 break
 
-            # 7.2 - clicar na lupa e copiar descrição da coluna seguinte
-            clicked = self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=5)
-            if not clicked:
-                clicked = self._tentar_clicar_imagem("lupa_fora_selecao", timeout=5)
-            if not clicked:
-                self.logger.info("Pedido %s | linha %s: lupa não encontrada, fim da grade.", n_orcamento, row_idx + 1)
-                break
-            time.sleep(0.5)
-
+            # 7.2 - TAB → coluna Descrição; copia o conteúdo
             keyboard.send_keys("{TAB}")
             time.sleep(0.3)
             keyboard.send_keys("^a")
             keyboard.send_keys("^c")
             time.sleep(0.3)
             description_on_screen = pyperclip.paste().strip()
-            keyboard.send_keys("{ESC}")
-            time.sleep(0.5)
+
+            if not description_on_screen:
+                self.logger.info("Pedido %s | linha %s: descrição vazia, fim da grade.", n_orcamento, row_idx + 1)
+                keyboard.send_keys("+{TAB}")  # volta ao Cód. Interno antes de sair
+                time.sleep(0.2)
+                break
 
             self.logger.info("Pedido %s | linha %s: descrição=%r", n_orcamento, row_idx + 1, description_on_screen)
 
@@ -715,8 +711,8 @@ class AutomotivApp:
                     break
 
             if matched_code:
-                # 7.3 - TAB × 16 → coluna Margem de Lucro → copiar valor
-                for _ in range(16):
+                # 7.3 - TAB × 15 → Margem de Lucro (16 total desde Cód. Interno, já demos 1)
+                for _ in range(15):
                     keyboard.send_keys("{TAB}")
                     time.sleep(0.1)
                 time.sleep(0.3)
@@ -724,6 +720,8 @@ class AutomotivApp:
                 keyboard.send_keys("^c")
                 time.sleep(0.3)
                 margin = pyperclip.paste().strip()
+                self.logger.info("Pedido %s | linha %s: código=%s bate com descrição e tem margem=%s",
+                                 n_orcamento, row_idx + 1, matched_code, margin)
                 if margin:
                     margins[matched_code] = margin
                     if transportadora_pedido and not carrier_found:
@@ -733,7 +731,20 @@ class AutomotivApp:
                         matched_code, margin, carrier_found,
                     )
                 target_codes.discard(matched_code)
+                # Volta ao Cód. Interno: 16 SHIFT+TABs (1 descrição + 15 até margem)
+                for _ in range(16):
+                    self.logger.info("Pedido %s | linha %s: voltando para coluna Cód. Interno após processar item com código=%s",
+                                     n_orcamento, row_idx + 1, matched_code)
+                    keyboard.send_keys("+{TAB}")
+                    time.sleep(0.1)
+            else:
+                # Não bateu — volta 1 SHIFT+TAB ao Cód. Interno
+                self.logger.info("Pedido %s | linha %s: descrição não bate com nenhum código restante: %r",
+                                 n_orcamento, row_idx + 1, description_on_screen)
+                keyboard.send_keys("+{TAB}")
+                time.sleep(0.2)
 
+            # DOWN → próxima linha (permanece na coluna Cód. Interno)
             keyboard.send_keys("{DOWN}")
             time.sleep(0.3)
 
