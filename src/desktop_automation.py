@@ -654,6 +654,10 @@ class AutomotivApp:
         self.logger.info("Processando pedido N=%s.", n_orcamento)
         target_codes = {c for c in material_items if c not in margins}
 
+        # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        time.sleep(1)
+
         # Passo 1: filtrar por código de orçamento (já estamos na tela de pesquisa)
         self._tentar_clicar_imagem("filtrar_por_codigo", timeout=10)
         time.sleep(1)
@@ -764,6 +768,10 @@ class AutomotivApp:
                 self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
                 time.sleep(0.5)
                 # Após limpar, o campo já está focado — não precisa clicar em input novamente
+
+        # Clicar em Pesquisar para voltar ao form de busca (próxima iteração começa em filtrar_por_codigo)
+        self._tentar_clicar_imagem("search_f5_button", timeout=5)
+        time.sleep(1)
 
         return carrier_found
 
