@@ -654,26 +654,22 @@ class AutomotivApp:
         self.logger.info("Processando pedido N=%s.", n_orcamento)
         target_codes = {c for c in material_items if c not in margins}
 
-        # Passo 1: fechar janela atual (lista de orçamentos)
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
-        time.sleep(1)
-
-        # Passo 2: filtrar por código de orçamento
+        # Passo 1: filtrar por código de orçamento (já estamos na tela de pesquisa)
         self._tentar_clicar_imagem("filtrar_por_codigo", timeout=10)
         time.sleep(1)
 
-        # Passo 3: TAB × 3 para chegar ao campo do N do orçamento
+        # Passo 2: TAB × 3 para chegar ao campo do N do orçamento
         for _ in range(3):
             keyboard.send_keys("{TAB}")
             time.sleep(0.2)
 
-        # Passo 4: digitar N do orçamento
+        # Passo 3: digitar N do orçamento
         pyperclip.copy(str(n_orcamento))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         time.sleep(0.5)
 
-        # Passo 5: pesquisar e verificar resultado
+        # Passo 4: pesquisar e verificar resultado
         keyboard.send_keys("{ENTER}")
         time.sleep(3)
 
@@ -681,7 +677,7 @@ class AutomotivApp:
             self.logger.info("Pedido %s não encontrado na busca. Pulando.", n_orcamento)
             return None
 
-        # Passo 6: abrir o único resultado com ENTER
+        # Passo 5: abrir o único resultado com ENTER
         keyboard.send_keys("{ENTER}")
         time.sleep(3)
 
@@ -768,10 +764,6 @@ class AutomotivApp:
                 self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
                 time.sleep(0.5)
                 # Após limpar, o campo já está focado — não precisa clicar em input novamente
-
-        # Fechar o pedido (apenas a aba do orçamento; não fechar a tela de pesquisa)
-        self._tentar_clicar_imagem("btn_fechar_aba", timeout=5)
-        time.sleep(1)
 
         return carrier_found
 
