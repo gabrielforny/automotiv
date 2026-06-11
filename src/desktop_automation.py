@@ -565,7 +565,7 @@ class AutomotivApp:
             self.logger.info("Nenhum pedido anterior encontrado para o cliente %s.", company_code)
             self._fechar_tela_pedidos_anteriores()
             return {}, None
-
+        
         margins: dict[str, str] = {}
         carrier_code: str | None = None
         max_orders = self.config.workflow.previous_orders_max_to_check
@@ -580,6 +580,10 @@ class AutomotivApp:
                 order_idx + 1, min(len(pedidos), max_orders),
                 n_orcamento, target_remaining,
             )
+
+            # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
+            self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+            time.sleep(1)
 
             found_carrier = self._buscar_margens_em_pedido(
                 n_orcamento=n_orcamento,
@@ -653,10 +657,6 @@ class AutomotivApp:
         """
         self.logger.info("Processando pedido N=%s.", n_orcamento)
         target_codes = {c for c in material_items if c not in margins}
-
-        # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
-        time.sleep(1)
 
         # Passo 1: filtrar por código de orçamento (já estamos na tela de pesquisa)
         self._tentar_clicar_imagem("filtrar_por_codigo", timeout=10)
@@ -768,10 +768,6 @@ class AutomotivApp:
                 self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
                 time.sleep(0.5)
                 # Após limpar, o campo já está focado — não precisa clicar em input novamente
-
-        # Clicar em Pesquisar para voltar ao form de busca (próxima iteração começa em filtrar_por_codigo)
-        self._tentar_clicar_imagem("search_f5_button", timeout=5)
-        time.sleep(1)
 
         return carrier_found
 
