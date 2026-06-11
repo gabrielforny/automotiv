@@ -590,13 +590,6 @@ class AutomotivApp:
             if found_carrier and not carrier_code:
                 carrier_code = found_carrier
 
-            # Passo 12: restaura lista de pedidos clicando em pesquisar para próxima iteração
-            is_last_order = order_idx >= min(len(pedidos), max_orders) - 1
-            still_has_targets = bool({c for c in material_items if c not in margins})
-            if not is_last_order and still_has_targets:
-                self._tentar_clicar_imagem("menu_orcamento_pesquisar", timeout=10)
-                time.sleep(3)
-
         self._fechar_tela_pedidos_anteriores()
         return margins, carrier_code
 
@@ -776,8 +769,8 @@ class AutomotivApp:
                 time.sleep(0.5)
                 # Após limpar, o campo já está focado — não precisa clicar em input novamente
 
-        # Fechar o pedido
-        self.close_current_screen()
+        # Fechar o pedido (apenas a aba do orçamento; não fechar a tela de pesquisa)
+        self._tentar_clicar_imagem("btn_fechar_aba", timeout=5)
         time.sleep(1)
 
         return carrier_found
