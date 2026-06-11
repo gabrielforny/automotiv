@@ -117,6 +117,9 @@ images:
   confirmar_pesquisa_muitos_itens: "confirmar_pesquisa_muitos_itens.PNG"
   click_ok_pesquisa_itens: "click_ok_pesquisa_itens.PNG"
   sem_dados_na_busca: "sem_dados_na_busca.PNG"
+  input_pesquisa_item_orcamento: "input_pesquisa_item_orcamento.PNG"
+  limpar_pesquisa_item_orcamento: "limpar_pesquisa_item_orcamento.PNG"
+  aba_transporte_orcamento: "aba_transporte_orcamento.PNG"
 
   previous_orders_search_all_checkbox: "previous_orders_search_all_checkbox.png"
   previous_orders_client_code_field: "previous_orders_client_code_field.png"

@@ -570,20 +570,19 @@ class AutomotivApp:
         carrier_code: str | None = None
         max_orders = self.config.workflow.previous_orders_max_to_check
 
-        for order_idx, (n_orcamento, transportadora_pedido) in enumerate(pedidos[:max_orders]):
+        for order_idx, (n_orcamento, _) in enumerate(pedidos[:max_orders]):
             target_remaining = {c for c in material_items if c not in margins}
             if not target_remaining and carrier_code:
                 break
 
             self.logger.info(
-                "Pedido %s/%s: N=%s | transportadora=%s | itens restantes=%s",
+                "Pedido %s/%s: N=%s | itens restantes=%s",
                 order_idx + 1, min(len(pedidos), max_orders),
-                n_orcamento, transportadora_pedido, target_remaining,
+                n_orcamento, target_remaining,
             )
 
             found_carrier = self._buscar_margens_em_pedido(
                 n_orcamento=n_orcamento,
-                transportadora_pedido=transportadora_pedido,
                 material_items=material_items,
                 margins=margins,
             )
@@ -604,31 +603,46 @@ class AutomotivApp:
     def _ler_pedidos_do_excel_exportado(
         self, excel_path: Path, company_code: str
     ) -> list[tuple[str, str | None]]:
-        """Lê o Excel exportado de orçamentos e filtra pelo Cód. Cliente (coluna 25).
+        """Lê o Excel exportado de orçamentos, filtra pelo Cód. Cliente e ordena por data desc.
 
         Colunas por posição (1-indexed):
           1  = N orçamento
-          4  = Cliente
           11 = Código da Transportadora
-          25 = Cód. Cliente (usado para filtrar)
+          24 = Data Orçamento  (anterior ao Cód. Cliente)
+          25 = Cód. Cliente (filtro)
         """
         workbook = load_workbook(excel_path, data_only=True)
         sheet = workbook.active
-        pedidos: list[tuple[str, str | None]] = []
         cod_alvo = str(company_code).strip()
 
+        rows_raw: list[tuple[str, str | None, any]] = []
         for row in range(2, sheet.max_row + 1):
             cod_cliente = str(sheet.cell(row=row, column=25).value or "").strip()
             if cod_cliente != cod_alvo:
                 continue
             n_orcamento = str(sheet.cell(row=row, column=1).value or "").strip()
+            if not n_orcamento:
+                continue
             transportadora = str(sheet.cell(row=row, column=11).value or "").strip() or None
-            if n_orcamento:
-                pedidos.append((n_orcamento, transportadora))
+            data_orcamento = sheet.cell(row=row, column=24).value  # datetime ou string
+            rows_raw.append((n_orcamento, transportadora, data_orcamento))
 
         workbook.close()
+
+        # Ordenar por data decrescente (mais recente primeiro); None vai para o fim
+        def _sort_key(item):
+            data = item[2]
+            if data is None:
+                return (0, "")
+            if hasattr(data, "toordinal"):  # datetime
+                return (1, data.toordinal())
+            return (1, str(data))
+
+        rows_raw.sort(key=_sort_key, reverse=True)
+        pedidos = [(n, t) for n, t, _ in rows_raw]
+
         self.logger.info(
-            "Pedidos do cliente %s: %s encontrado(s): %s",
+            "Pedidos do cliente %s: %s encontrado(s) (ordenados por data desc): %s",
             company_code, len(pedidos), [p[0] for p in pedidos],
         )
         return pedidos
@@ -636,16 +650,15 @@ class AutomotivApp:
     def _buscar_margens_em_pedido(
         self,
         n_orcamento: str,
-        transportadora_pedido: str | None,
         material_items: dict[str, str | None],
         margins: dict[str, str],
     ) -> str | None:
-        """Abre um pedido anterior e extrai margens dos itens alvo comparando por descrição.
+        """Abre um pedido anterior, pesquisa cada item pelo campo de busca e extrai margens.
 
         Muta `margins` com os valores encontrados.
-        Retorna transportadora_pedido se ao menos uma margem foi salva, None caso contrário.
+        Retorna o código da transportadora lido do orçamento, ou None.
         """
-        self.logger.info("Processando pedido N=%s | transportadora=%s.", n_orcamento, transportadora_pedido)
+        self.logger.info("Processando pedido N=%s.", n_orcamento)
         target_codes = {c for c in material_items if c not in margins}
 
         # Passo 1: fechar janela atual (lista de orçamentos)
@@ -672,106 +685,98 @@ class AutomotivApp:
         time.sleep(3)
 
         if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
-            self.logger.info("Pedido %s não encontrado na busca (sem dados). Pulando.", n_orcamento)
+            self.logger.info("Pedido %s não encontrado na busca. Pulando.", n_orcamento)
             return None
 
-        # Passo 6: abrir o único resultado com ENTER (não precisa exportar — sabemos que existe)
+        # Passo 6: abrir o único resultado com ENTER
         keyboard.send_keys("{ENTER}")
         time.sleep(3)
 
-        # Passo 7: percorrer grade de itens buscando itens alvo
+        # Passo 7: pesquisar cada item pelo campo de busca dentro do orçamento
         carrier_found: str | None = None
+        _sentinel = "__LENDO__"
+        codes_to_search = list(target_codes)
 
-        # 7.1 - garantir aba Itens ativa e posicionar na primeira linha da grade
-        self._tentar_clicar_imagem("aba_itens_orcamento", timeout=10)
-        time.sleep(1)
-        keyboard.send_keys("{DOWN}")
-        time.sleep(0.3)
-        keyboard.send_keys("{HOME}")
-        time.sleep(0.3)
+        # Primeira pesquisa: clicar no campo de busca de item
+        self._tentar_clicar_imagem("input_pesquisa_item_orcamento", timeout=10)
+        time.sleep(0.5)
 
-        _SENTINEL = "__LENDO_CODIGO__"
-        _MAX_ROWS = 200
-        for row_idx in range(_MAX_ROWS):
-            if not target_codes:
-                break
+        for code_idx, code in enumerate(codes_to_search):
+            if code in margins:
+                # Item já encontrado em iteração anterior; limpar se houver próximo
+                has_next = any(c not in margins for c in codes_to_search[code_idx + 1:])
+                if has_next:
+                    self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
+                    time.sleep(0.5)
+                continue
 
-            # 7.2 - Clicar na lupa do Cód. Interno: abre popup com o código já selecionado
-            lupa_clicked = self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=5)
-            if not lupa_clicked:
-                self.logger.info("Pedido %s | linha %s: lupa não encontrada, fim da grade.", n_orcamento, row_idx + 1)
-                break
-            time.sleep(0.8)
-
-            # 7.3 - Ler o código interno do campo selecionado no popup
-            pyperclip.copy(_SENTINEL)
-            time.sleep(0.1)
+            # Campo já está focado (inicial ou pós-limpar)
+            pyperclip.copy(code)
             keyboard.send_keys("^a")
-            keyboard.send_keys("^c")
-            time.sleep(0.3)
-            codigo_on_screen = pyperclip.paste().strip()
+            keyboard.send_keys("^v")
+            time.sleep(0.5)
+            keyboard.send_keys("{ENTER}")
+            time.sleep(1.5)
 
-            if not codigo_on_screen or codigo_on_screen == _SENTINEL:
-                self.logger.info("Pedido %s | linha %s: código vazio/ilegível, fim da grade.", n_orcamento, row_idx + 1)
-                keyboard.send_keys("{ESCAPE}")
-                break
+            self.logger.info("Pedido %s | buscando código=%s", n_orcamento, code)
 
-            self.logger.info("Pedido %s | linha %s: código=%r", n_orcamento, row_idx + 1, codigo_on_screen)
+            lupa_dentro = self._image_esta_visivel("lupa_dentro_selecao", timeout=3)
+            lupa_fora = not lupa_dentro and self._image_esta_visivel("lupa_fora_selecao", timeout=3)
 
-            # Fechar o popup antes de qualquer navegação
-            keyboard.send_keys("{ESCAPE}")
-            time.sleep(0.3)
+            if lupa_dentro or lupa_fora:
+                # Clicar na lupa que apareceu
+                if not self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=3):
+                    self._tentar_clicar_imagem("lupa_fora_selecao", timeout=3)
+                time.sleep(0.5)
 
-            matched_code = codigo_on_screen if codigo_on_screen in target_codes else None
-
-            if matched_code:
-                # 7.4 - TAB × 15 → Margem de Lucro (ajustar conforme colunas reais)
-                for _ in range(15):
+                # TAB × 17 → ENTER → Ctrl+C para ler Margem de Lucro
+                for _ in range(17):
                     keyboard.send_keys("{TAB}")
                     time.sleep(0.1)
+                keyboard.send_keys("{ENTER}")
                 time.sleep(0.3)
-
-                pyperclip.copy(_SENTINEL)
+                pyperclip.copy(_sentinel)
                 time.sleep(0.1)
-                keyboard.send_keys("{F2}")
-                time.sleep(0.2)
-                keyboard.send_keys("^a")
                 keyboard.send_keys("^c")
                 time.sleep(0.3)
-                keyboard.send_keys("{ESCAPE}")
-                time.sleep(0.1)
                 margin = pyperclip.paste().strip()
 
-                if margin == _SENTINEL:
-                    pyperclip.copy(_SENTINEL)
+                if margin and margin != _sentinel:
+                    margins[code] = margin
+                    self.logger.info("Margem extraída: código=%s | margem=%s", code, margin)
+                else:
+                    self.logger.warning("Pedido %s | código=%s: margem ilegível.", n_orcamento, code)
+
+                # Ler transportadora (apenas na primeira vez que encontramos um item)
+                if not carrier_found:
+                    self._tentar_clicar_imagem("aba_transporte_orcamento", timeout=5)
+                    time.sleep(0.5)
+                    for _ in range(2):
+                        keyboard.send_keys("{TAB}")
+                        time.sleep(0.2)
+                    pyperclip.copy(_sentinel)
                     time.sleep(0.1)
-                    keyboard.send_keys("^a")
                     keyboard.send_keys("^c")
                     time.sleep(0.3)
-                    margin = pyperclip.paste().strip()
+                    carrier_raw = pyperclip.paste().strip()
+                    if carrier_raw and carrier_raw != _sentinel:
+                        carrier_found = carrier_raw
+                        self.logger.info("Transportadora lida: %s", carrier_found)
 
-                if margin and margin != _SENTINEL:
-                    margins[matched_code] = margin
-                    if transportadora_pedido and not carrier_found:
-                        carrier_found = transportadora_pedido
-                    self.logger.info(
-                        "Margem extraída: código=%s | margem=%s | transportadora=%s",
-                        matched_code, margin, carrier_found,
-                    )
-                else:
-                    self.logger.warning(
-                        "Pedido %s | linha %s: margem ilegível para código=%s",
-                        n_orcamento, row_idx + 1, matched_code,
-                    )
-                target_codes.discard(matched_code)
-                keyboard.send_keys("{HOME}")
-                time.sleep(0.2)
+                    # Voltar para aba Itens
+                    self._tentar_clicar_imagem("aba_itens_orcamento", timeout=5)
+                    time.sleep(0.5)
+            else:
+                self.logger.info("Pedido %s | código=%s: não encontrado neste orçamento.", n_orcamento, code)
 
-            # DOWN → próxima linha (mantém foco na coluna Cód. Interno via HOME já feito ou posição natural)
-            keyboard.send_keys("{DOWN}")
-            time.sleep(0.3)
+            # Se há mais itens para buscar, limpar o campo de pesquisa
+            has_next = any(c not in margins for c in codes_to_search[code_idx + 1:])
+            if has_next:
+                self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
+                time.sleep(0.5)
+                # Após limpar, o campo já está focado — não precisa clicar em input novamente
 
-        # Fechar o pedido aberto
+        # Fechar o pedido
         self.close_current_screen()
         time.sleep(1)
 

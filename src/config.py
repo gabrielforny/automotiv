@@ -118,6 +118,9 @@ class ImagesConfig(BaseModel):
     filtrar_por_codigo: str = "filtrar_por_codigo.png"
     export_excel_pedidos_anchor: str = "export_excel_pedidos_anchor.PNG"
     sem_dados_na_busca: str = "sem_dados_na_busca.PNG"
+    input_pesquisa_item_orcamento: str = "input_pesquisa_item_orcamento.PNG"
+    limpar_pesquisa_item_orcamento: str = "limpar_pesquisa_item_orcamento.PNG"
+    aba_transporte_orcamento: str = "aba_transporte_orcamento.PNG"
 
 class SiteSearchConfig(BaseModel):
     wait_after_open_seconds: float = 3.0
