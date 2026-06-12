@@ -658,7 +658,12 @@ class AutomotivApp:
         self.logger.info("Processando pedido N=%s.", n_orcamento)
         target_codes = {c for c in material_items if c not in margins}
 
-        # Passo 1: filtrar por código de orçamento (já estamos na tela de pesquisa)
+        # Passo 1: garantir que estamos no form de pesquisa (filtrar_por_codigo visível)
+        if not self._image_esta_visivel("filtrar_por_codigo", timeout=3):
+            self.logger.info("filtrar_por_codigo não visível — clicando search_f5_button para voltar ao form.")
+            self._tentar_clicar_imagem("search_f5_button", timeout=10)
+            time.sleep(1)
+
         self._tentar_clicar_imagem("filtrar_por_codigo", timeout=10)
         time.sleep(1)
 
