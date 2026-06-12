@@ -570,6 +570,10 @@ class AutomotivApp:
         carrier_code: str | None = None
         max_orders = self.config.workflow.previous_orders_max_to_check
 
+        # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
+        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        time.sleep(1)
+        
         for order_idx, (n_orcamento, _) in enumerate(pedidos[:max_orders]):
             target_remaining = {c for c in material_items if c not in margins}
             if not target_remaining and carrier_code:
@@ -580,10 +584,6 @@ class AutomotivApp:
                 order_idx + 1, min(len(pedidos), max_orders),
                 n_orcamento, target_remaining,
             )
-
-            # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
-            self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
-            time.sleep(1)
 
             found_carrier = self._buscar_margens_em_pedido(
                 n_orcamento=n_orcamento,
