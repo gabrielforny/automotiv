@@ -661,6 +661,8 @@ class AutomotivApp:
         # Passo 1: garantir que estamos no form de pesquisa (filtrar_por_codigo visível)
         if not self._image_esta_visivel("filtrar_por_codigo", timeout=3):
             self.logger.info("filtrar_por_codigo não visível — clicando search_f5_button para voltar ao form.")
+            self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
+            time.sleep(0.5)
             self._tentar_clicar_imagem("search_f5_button", timeout=10)
             time.sleep(1)
 
