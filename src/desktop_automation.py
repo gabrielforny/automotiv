@@ -139,6 +139,7 @@ class AutomotivApp:
         time.sleep(5)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
+        submenu_open = False
         for label in labels:
             image_key = self._menu_label_to_image_key(label)
             image_name = self._get_image_name(image_key)
@@ -146,17 +147,31 @@ class AutomotivApp:
                 self.logger.info("Clicando menu '%s' por imagem '%s'.", label, image_name)
                 self._tentar_clicar_imagem(image_key, timeout=12)
                 time.sleep(0.8)
+                submenu_open = True
                 continue
             self.logger.info("Imagem do menu '%s' não configurada. Tentando por controle Windows.", label)
-            self._click_menu_by_control(label)
+            self._click_menu_by_control(label, search_in_popup=submenu_open)
             time.sleep(0.8)
+            submenu_open = True
 
-    def _click_menu_by_control(self, label: str) -> None:
+    def _click_menu_by_control(self, label: str, search_in_popup: bool = False) -> None:
         desktop = Desktop(backend="uia")
         window = desktop.window(title_re=self.config.app.window_title_regex)
         window.set_focus()
         try:
-            control = window.child_window(title=label, control_type="MenuItem")
+            if search_in_popup:
+                # Após um clique de menu anterior, busca dentro do popup/submenu aberto
+                try:
+                    popup = desktop.window(control_type="Menu", visible_only=True)
+                    control = popup.child_window(title=label, control_type="MenuItem")
+                    control.wait("exists enabled visible", timeout=5)
+                    control.click_input()
+                    return
+                except Exception:
+                    pass  # fallback para busca na janela principal
+
+            # Busca na janela toda, usando found_index=0 para evitar ambiguidade
+            control = window.child_window(title=label, control_type="MenuItem", found_index=0)
             control.wait("exists enabled visible", timeout=8)
             control.click_input()
         except Exception as exc:
