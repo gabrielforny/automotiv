@@ -686,6 +686,8 @@ class AutomotivApp:
 
         if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
             self.logger.info("Pedido %s não encontrado na busca. Pulando.", n_orcamento)
+            self._tentar_clicar_imagem("search_f5_button", timeout=10)
+            time.sleep(1)
             return None
 
         # Passo 5: abrir o único resultado com ENTER
@@ -775,6 +777,10 @@ class AutomotivApp:
                 self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
                 time.sleep(0.5)
                 # Após limpar, o campo já está focado — não precisa clicar em input novamente
+
+        # Voltar ao form de pesquisa para a próxima iteração
+        self._tentar_clicar_imagem("search_f5_button", timeout=10)
+        time.sleep(1)
 
         return carrier_found
 
