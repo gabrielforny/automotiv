@@ -58,7 +58,7 @@ class AutomotivApp:
 
     def _fill_password_field(self) -> None:
         self.logger.info("Localizando campo de nome/login por imagem.")
-        time.sleep(10)
+        time.sleep(5)
         # try:
         #     self._tentar_clicar_imagem("input_empresa_login", timeout=15)
         #     time.sleep(0.5)
