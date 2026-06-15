@@ -60,7 +60,6 @@ class AutomotivBotGui(tk.Tk):
 
         self.excel_path = tk.StringVar(value="")
         self.cliente = tk.StringVar(value="")
-        self.dry_run = tk.BooleanVar(value=True)
 
         self._try_auto_detect_excel()
         self._build_layout()
@@ -92,12 +91,6 @@ class AutomotivBotGui(tk.Tk):
 
         ttk.Label(form, text="CPF/CNPJ do cliente (opcional):").grid(row=2, column=0, sticky="w", pady=(10, 0))
         ttk.Entry(form, textvariable=self.cliente).grid(row=3, column=0, sticky="ew", padx=(0, 8))
-
-        ttk.Checkbutton(
-            form,
-            text="Modo teste: apenas ler planilha, sem controlar o sistema",
-            variable=self.dry_run,
-        ).grid(row=4, column=0, sticky="w", pady=(10, 0))
 
         form.columnconfigure(0, weight=1)
 
@@ -159,7 +152,7 @@ class AutomotivBotGui(tk.Tk):
     def _run_bot(self) -> None:
         try:
             config = load_config()
-            config.runtime.dry_run = self.dry_run.get()
+            config.runtime.dry_run = False
             base_logger = setup_logger(config.runtime.log_level)
             logger = QueueLogger(self.log_queue, base_logger)
 

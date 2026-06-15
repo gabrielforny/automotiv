@@ -58,12 +58,17 @@ class AutomotivApp:
 
     def _fill_password_field(self) -> None:
         self.logger.info("Localizando campo de nome/login por imagem.")
-        self._tentar_clicar_imagem("input_empresa_login", timeout=15)
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
+        time.sleep(5)
+        try:
+            self._tentar_clicar_imagem("input_empresa_login", timeout=15)
+            time.sleep(0.5)
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.5)
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.5)
+        except Exception as exc:
+            self.logger.info("Não conseguiu clicar no campo do input do nome da empresa, entao apenas digitando a senha direto", exc)
+            time.sleep(0.5)
         pyperclip.copy(self.config.app.login_password)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
