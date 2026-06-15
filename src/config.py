@@ -169,9 +169,9 @@ class BotConfig(BaseModel):
 
 
 def _bundle_base() -> Path:
-    """Retorna a pasta raiz: ao lado do .exe quando empacotado, raiz do projeto em dev."""
+    """Retorna a pasta com os arquivos bundled: sys._MEIPASS no exe, raiz do projeto em dev."""
     if getattr(sys, "frozen", False):
-        return Path(sys.executable).parent
+        return Path(sys._MEIPASS)  # type: ignore[attr-defined]
     return Path(__file__).parent.parent
 
 
