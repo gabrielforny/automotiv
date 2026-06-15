@@ -20,6 +20,7 @@ from src.desktop_automation import AutomotivApp
 from src.excel_reader import read_budget_items, read_company_name_from_excel
 from src.logger import setup_logger
 from src.material_service import MaterialService
+from src.site_search_service import SiteSearchService
 from src.history_manager import HistoryManager
 from src.orcamento_service import OrcamentoService
 
@@ -171,7 +172,8 @@ class AutomotivBotGui(tk.Tk):
             app.start()
             app.login()
 
-            material_service = MaterialService(app, logger)
+            site_service = SiteSearchService(config, logger)
+            material_service = MaterialService(app, site_service, logger)
             material_results = material_service.process_items(items)
 
             client_code = None

@@ -6,6 +6,12 @@ from typing import Optional
 
 import pyautogui
 
+try:
+    import cv2  # noqa: F401
+    _CV2_AVAILABLE = True
+except Exception:
+    _CV2_AVAILABLE = False
+
 
 class ImageAutomation:
     """Utilitário de automação por imagem usando PyAutoGUI."""
@@ -31,13 +37,15 @@ class ImageAutomation:
         if not image_path.exists():
             raise FileNotFoundError(f"Imagem não encontrada: {image_path}")
 
-        final_confidence = confidence if confidence is not None else self.confidence
+        raw_confidence = confidence if confidence is not None else self.confidence
+        final_confidence = raw_confidence if _CV2_AVAILABLE else None
         deadline = time.time() + timeout
         last_error: Exception | None = None
 
         while time.time() < deadline:
             try:
-                center = pyautogui.locateCenterOnScreen(str(image_path), confidence=final_confidence)
+                kwargs = {"confidence": final_confidence} if final_confidence is not None else {}
+                center = pyautogui.locateCenterOnScreen(str(image_path), **kwargs)
                 if center:
                     return center
             except Exception as error:
@@ -85,13 +93,15 @@ class ImageAutomation:
         if not image_path.exists():
             raise FileNotFoundError(f"Imagem não encontrada: {image_path}")
 
-        final_confidence = confidence if confidence is not None else self.confidence
+        raw_confidence = confidence if confidence is not None else self.confidence
+        final_confidence = raw_confidence if _CV2_AVAILABLE else None
         deadline = time.time() + timeout
         last_error: Exception | None = None
 
         while time.time() < deadline:
             try:
-                matches = list(pyautogui.locateAllOnScreen(str(image_path), confidence=final_confidence))
+                kwargs = {"confidence": final_confidence} if final_confidence is not None else {}
+                matches = list(pyautogui.locateAllOnScreen(str(image_path), **kwargs))
                 if matches:
                     bottom_match = max(matches, key=lambda box: box.top)
                     center_x = bottom_match.left + bottom_match.width // 2

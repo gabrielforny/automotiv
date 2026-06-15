@@ -77,7 +77,9 @@ class AutomotivApp:
 
     def click_login(self) -> None:
         self.logger.info("Clicando no botão LOGIN por imagem.")
-        self._tentar_clicar_imagem("login_button", timeout=15)
+        clicked = self._tentar_clicar_imagem("login_button", timeout=15)
+        if not clicked:
+            raise RuntimeError("Botão LOGIN não encontrado na tela. Verifique se o GRV está aberto e na tela de login.")
         self.logger.info("Clique no botão LOGIN realizado com sucesso por imagem.")
 
     def open_materials_screen(self) -> None:
