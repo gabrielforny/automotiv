@@ -58,14 +58,9 @@ class AutomotivApp:
 
     def _fill_password_field(self) -> None:
         self.logger.info("Localizando campo de nome/login por imagem.")
-        clicked = self.image.click(
-            image_name=self._get_required_image_name("input_nome_login"),
-            timeout=15,
-            confidence=self._get_confidence(),
-        )
-        if not clicked:
-            raise RuntimeError("Não foi possível localizar o campo de login por imagem.")
-
+        self._tentar_clicar_imagem("input_empresa_login", timeout=15)
+        time.sleep(0.5)
+        keyboard.send_keys("{TAB}")
         time.sleep(0.5)
         keyboard.send_keys("{TAB}")
         time.sleep(0.5)

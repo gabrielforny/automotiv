@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -166,8 +167,20 @@ class BotConfig(BaseModel):
     site_search: SiteSearchConfig = Field(default_factory=SiteSearchConfig)
 
 
+def _bundle_base() -> Path:
+    """Retorna a pasta raiz: ao lado do .exe quando empacotado, raiz do projeto em dev."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).parent.parent
+
+
 def load_config(path: str | Path = "config/config.yaml") -> BotConfig:
-    config_path = Path(path)
+    base = _bundle_base()
+    config_path = base / path if not Path(str(path)).is_absolute() else Path(path)
     with config_path.open("r", encoding="utf-8") as file:
         raw: dict[str, Any] = yaml.safe_load(file) or {}
-    return BotConfig.model_validate(raw)
+    config = BotConfig.model_validate(raw)
+    # Resolve assets_dir relativo à pasta do bundle quando empacotado
+    if getattr(sys, "frozen", False) and not Path(config.images.assets_dir).is_absolute():
+        config.images.assets_dir = str(base / config.images.assets_dir)
+    return config
