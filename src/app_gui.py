@@ -130,7 +130,7 @@ class AutomotivBotGui(tk.Tk):
             return
 
         self.start_button.configure(state="disabled")
-        self.status.configure(text="Executando...")
+        self.status.configure(text="Executando...", foreground="")
         self._append_log("[INFO] Execução iniciada.")
 
         self.worker = threading.Thread(target=self._run_bot, daemon=True)
@@ -191,17 +191,26 @@ class AutomotivBotGui(tk.Tk):
             history.write_history(items, material_results, client_code=client_code, budget_number=budget_number)
             history.copy_input_to_processed(excel_path)
             logger.info("Execução finalizada.")
-            self.log_queue.put("__DONE__")
+            self.log_queue.put("__SUCCESS__")
         except Exception as exc:
             self.log_queue.put(f"[ERROR] {exc}")
-            self.log_queue.put("__DONE__")
+            self.log_queue.put("__ERROR__")
 
     def _consume_logs(self) -> None:
         while not self.log_queue.empty():
             message = self.log_queue.get()
-            if message == "__DONE__":
+            if message == "__SUCCESS__":
                 self.start_button.configure(state="normal")
-                self.status.configure(text="Execução finalizada.")
+                self.status.configure(
+                    text="Concluido com sucesso!",
+                    foreground="green",
+                )
+            elif message == "__ERROR__":
+                self.start_button.configure(state="normal")
+                self.status.configure(
+                    text="Erro durante a execucao. Veja o log acima.",
+                    foreground="red",
+                )
             else:
                 self._append_log(message)
         self.after(200, self._consume_logs)

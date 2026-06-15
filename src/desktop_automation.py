@@ -568,20 +568,19 @@ class AutomotivApp:
         
         margins: dict[str, str] = {}
         carrier_code: str | None = None
-        max_orders = self.config.workflow.previous_orders_max_to_check
 
         # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
         self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
         time.sleep(1)
-        
-        for order_idx, (n_orcamento, _) in enumerate(pedidos[:max_orders]):
+
+        for order_idx, (n_orcamento, _) in enumerate(pedidos):
             target_remaining = {c for c in material_items if c not in margins}
             if not target_remaining and carrier_code:
                 break
 
             self.logger.info(
                 "Pedido %s/%s: N=%s | itens restantes=%s",
-                order_idx + 1, min(len(pedidos), max_orders),
+                order_idx + 1, len(pedidos),
                 n_orcamento, target_remaining,
             )
 
