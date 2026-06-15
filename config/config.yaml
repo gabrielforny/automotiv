@@ -61,6 +61,7 @@ images:
 
   input_senha: "input_senha.png"
   input_nome_login: "input_nome_login.png"
+  input_empresa_login: "input_empresa_login.PNG"
   login_button: "login_button.png"
 
   menu_cadastro: "menu_cadastro.png"

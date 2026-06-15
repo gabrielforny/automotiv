@@ -49,6 +49,7 @@ class ImagesConfig(BaseModel):
 
     input_senha: str = "input_senha.png"
     input_nome_login: str = "input_nome_login.png"
+    input_empresa_login: str = "input_empresa_login.PNG"
     login_button: str = "login_button.png"
 
     menu_cadastro: str = "menu_cadastro.png"
