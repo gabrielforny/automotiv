@@ -1,9 +1,16 @@
 from __future__ import annotations
 
 import shutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
+
+
+def _get_base_dir() -> Path:
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).parent.parent
 
 from openpyxl import Workbook
 
@@ -42,6 +49,15 @@ class HistoryManager:
         if excel_path.exists():
             shutil.copy2(excel_path, target)
             self.logger.info("Cópia da planilha salva em Processados: %s", target)
+        return target
+
+    def move_to_processed(self, excel_path: Path) -> Path:
+        processed_dir = _get_base_dir() / "processados"
+        processed_dir.mkdir(parents=True, exist_ok=True)
+        target = processed_dir / f"{self.execution_id}_{excel_path.name}"
+        if excel_path.exists():
+            shutil.move(str(excel_path), target)
+            self.logger.info("Planilha movida para processados: %s", target)
         return target
 
     def write_history(

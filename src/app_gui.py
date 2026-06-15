@@ -1,10 +1,18 @@
 from __future__ import annotations
 
 import queue
+import sys
 import threading
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
+
+
+def _get_base_dir() -> Path:
+    """Retorna a pasta onde o executável (ou o script em dev) está localizado."""
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
+    return Path(__file__).parent.parent
 
 from src.cliente_service import ClienteService
 from src.config import load_config
@@ -54,6 +62,7 @@ class AutomotivBotGui(tk.Tk):
         self.cliente = tk.StringVar(value="")
         self.dry_run = tk.BooleanVar(value=True)
 
+        self._try_auto_detect_excel()
         self._build_layout()
         self.after(200, self._consume_logs)
 
@@ -66,26 +75,29 @@ class AutomotivBotGui(tk.Tk):
 
         subtitle = ttk.Label(
             container,
-            text="Selecione uma planilha ou deixe em branco para usar o caminho padrão do config.yaml.",
+            text="Coloque a planilha de orçamento nesta mesma pasta e clique em Iniciar.",
         )
-        subtitle.pack(anchor="w", pady=(0, 16))
+        subtitle.pack(anchor="w", pady=(0, 12))
 
-        form = ttk.LabelFrame(container, text="Configuração da execução", padding=12)
+        form = ttk.LabelFrame(container, text="Planilha de orçamento", padding=12)
         form.pack(fill="x")
 
-        ttk.Label(form, text="Planilha Excel (opcional):").grid(row=0, column=0, sticky="w")
-        ttk.Entry(form, textvariable=self.excel_path).grid(row=1, column=0, sticky="ew", padx=(0, 8))
-        ttk.Label(form, text=f"Se ficar vazio, será usado: {self.config_data.excel.default_path}").grid(row=2, column=0, sticky="w", pady=(4, 0))
-        ttk.Button(form, text="Selecionar...", command=self._select_excel).grid(row=1, column=1, sticky="e")
+        detected = self.excel_path.get()
+        hint = f"Detectada automaticamente: {Path(detected).name}" if detected else "Nenhuma planilha encontrada nesta pasta."
+        self.file_hint = ttk.Label(form, text=hint, foreground="green" if detected else "red")
+        self.file_hint.grid(row=0, column=0, sticky="w", pady=(0, 6))
 
-        ttk.Label(form, text="CPF/CNPJ do cliente (opcional nesta etapa):").grid(row=3, column=0, sticky="w", pady=(10, 0))
-        ttk.Entry(form, textvariable=self.cliente).grid(row=4, column=0, sticky="ew", padx=(0, 8))
+        ttk.Entry(form, textvariable=self.excel_path).grid(row=1, column=0, sticky="ew", padx=(0, 8))
+        ttk.Button(form, text="Trocar...", command=self._select_excel).grid(row=1, column=1, sticky="e")
+
+        ttk.Label(form, text="CPF/CNPJ do cliente (opcional):").grid(row=2, column=0, sticky="w", pady=(10, 0))
+        ttk.Entry(form, textvariable=self.cliente).grid(row=3, column=0, sticky="ew", padx=(0, 8))
 
         ttk.Checkbutton(
             form,
             text="Modo teste: apenas ler planilha, sem controlar o sistema",
             variable=self.dry_run,
-        ).grid(row=5, column=0, sticky="w", pady=(10, 0))
+        ).grid(row=4, column=0, sticky="w", pady=(10, 0))
 
         form.columnconfigure(0, weight=1)
 
@@ -105,11 +117,19 @@ class AutomotivBotGui(tk.Tk):
         self.log_text.configure(state="disabled")
 
 
+    def _try_auto_detect_excel(self) -> None:
+        base = _get_base_dir()
+        xlsx_files = sorted(
+            f for f in base.glob("*.xlsx") if not f.name.startswith("~")
+        )
+        if xlsx_files:
+            self.excel_path.set(str(xlsx_files[0]))
+
     def _resolve_excel_path(self) -> Path:
         typed_path = self.excel_path.get().strip()
         if typed_path:
             return Path(typed_path)
-        return Path(self.config_data.excel.default_path)
+        return _get_base_dir()
 
     def _select_excel(self) -> None:
         path = filedialog.askopenfilename(
@@ -146,7 +166,6 @@ class AutomotivBotGui(tk.Tk):
             excel_path = self._resolve_excel_path()
             history = HistoryManager(config, logger)
             logger.info("Planilha usada: %s", excel_path)
-            history.copy_input_to_pending(excel_path)
 
             items = read_budget_items(excel_path, config.excel)
             logger.info("Itens lidos da planilha: %s", len(items))
@@ -189,7 +208,7 @@ class AutomotivBotGui(tk.Tk):
                 logger.info("Fluxo de orçamento desabilitado em workflow.enable_budget_flow=false.")
 
             history.write_history(items, material_results, client_code=client_code, budget_number=budget_number)
-            history.copy_input_to_processed(excel_path)
+            history.move_to_processed(excel_path)
             logger.info("Execução finalizada.")
             self.log_queue.put("__SUCCESS__")
         except Exception as exc:
