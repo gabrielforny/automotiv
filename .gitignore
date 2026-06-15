@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Logs
+logs/*.log
+
+# Dados de execução (não commitar planilhas de clientes)
+data/a_processar/*.xlsx
+data/processados/
+data/historico/
+data/exportados/
+data/pdfs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
