@@ -310,6 +310,10 @@ def read_login_credentials_from_excel(
 ) -> tuple[str | None, str | None]:
     """Lê NOME e SENHA do representante nas linhas de cabeçalho da planilha.
 
+    Estratégia:
+    - Procura label "NOME" nas linhas antes do cabeçalho e lê o valor na linha seguinte.
+    - Procura label "SENHA" nas mesmas linhas; se não encontrar (campo oculto sem label),
+      usa o próximo valor não-vazio à direita do NOME na mesma linha de dados.
     Retorna (nome, senha). Qualquer campo não encontrado vem como None.
     """
     path = Path(excel_path)
@@ -321,20 +325,36 @@ def read_login_credentials_from_excel(
 
     nome: str | None = None
     senha: str | None = None
+    nome_data_col: int | None = None
+    nome_data_row: int | None = None
 
     for row_idx in range(1, config.header_row):
         row_cells = sheet[row_idx]
         labels = [_normalize_header(c.value) for c in row_cells]
 
         for col_idx, label in enumerate(labels):
+            col_1based = col_idx + 1
+            data_row = row_idx + 1
+
             if label == "NOME":
-                val = _to_clean_text(sheet.cell(row=row_idx + 1, column=col_idx + 1).value)
+                val = _to_clean_text(sheet.cell(row=data_row, column=col_1based).value)
                 if val:
                     nome = val
+                    nome_data_col = col_1based
+                    nome_data_row = data_row
+
             if "SENHA" in label:
-                val = _to_clean_text(sheet.cell(row=row_idx + 1, column=col_idx + 1).value)
+                val = _to_clean_text(sheet.cell(row=data_row, column=col_1based).value)
                 if val:
                     senha = val
+
+    # Fallback: sem label SENHA, pega o próximo valor não-vazio à direita do NOME.
+    if senha is None and nome_data_col is not None and nome_data_row is not None:
+        for col in range(nome_data_col + 1, sheet.max_column + 1):
+            val = _to_clean_text(sheet.cell(row=nome_data_row, column=col).value)
+            if val:
+                senha = val
+                break
 
     workbook.close()
     return nome, senha
