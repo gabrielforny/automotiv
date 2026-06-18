@@ -17,7 +17,7 @@ def _get_base_dir() -> Path:
 from src.cliente_service import ClienteService
 from src.config import load_config
 from src.desktop_automation import AutomotivApp
-from src.excel_reader import read_budget_items, read_company_name_from_excel
+from src.excel_reader import read_budget_items, read_company_name_from_excel, read_login_credentials_from_excel
 from src.logger import setup_logger
 from src.material_service import MaterialService
 from src.site_search_service import SiteSearchService
@@ -114,7 +114,9 @@ class AutomotivBotGui(tk.Tk):
     def _try_auto_detect_excel(self) -> None:
         base = _get_base_dir()
         xlsx_files = sorted(
-            f for f in base.glob("*.xlsx") if not f.name.startswith("~")
+            (f for f in base.glob("*.xlsx") if not f.name.startswith("~")),
+            key=lambda f: f.stat().st_mtime,
+            reverse=True,
         )
         if xlsx_files:
             self.excel_path.set(str(xlsx_files[0]))
@@ -165,12 +167,14 @@ class AutomotivBotGui(tk.Tk):
             logger.info("Itens lidos da planilha: %s", len(items))
             company_name = read_company_name_from_excel(excel_path, config.excel, logger=logger)
             logger.info("Nome da empresa lido da planilha: %s", company_name)
+            login_nome, login_senha = read_login_credentials_from_excel(excel_path, config.excel)
+            logger.info("Credenciais lidas da planilha: nome=%s senha=%s", login_nome, "***" if login_senha else None)
             for item in items:
                 logger.info("Linha %s | Código/Referência: %s | Quantidade: %s", item.row_number, item.code_or_reference, item.quantity)
 
             app = AutomotivApp(config, logger)
             app.start()
-            app.login()
+            app.login(nome=login_nome, senha=login_senha)
 
             site_service = SiteSearchService(config, logger)
             material_service = MaterialService(app, site_service, logger)

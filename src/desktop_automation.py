@@ -47,33 +47,37 @@ class AutomotivApp:
         )
         self.logger.info("Sistema aberto/conectado.")
 
-    def login(self) -> None:
+    def login(self, nome: str | None = None, senha: str | None = None) -> None:
         self.logger.info("Efetuando login.")
         if self.config.runtime.dry_run:
             return
 
-        self._fill_password_field()
+        self._fill_login_fields(nome=nome, senha=senha)
         self.click_login()
         time.sleep(self.config.app.wait_after_login_seconds)
 
-    def _fill_password_field(self) -> None:
-        self.logger.info("Localizando campo de nome/login por imagem.")
+    def _fill_login_fields(self, nome: str | None = None, senha: str | None = None) -> None:
         time.sleep(5)
-        # try:
-        #     self._tentar_clicar_imagem("input_empresa_login", timeout=15)
-        #     time.sleep(0.5)
-        #     keyboard.send_keys("{TAB}")
-        #     time.sleep(0.5)
-        #     keyboard.send_keys("{TAB}")
-        #     time.sleep(0.5)
-        # except Exception as exc:
-        #     self.logger.info("Não conseguiu clicar no campo do input do nome da empresa, entao apenas digitando a senha direto", exc)
-        #     time.sleep(0.5)
-        pyperclip.copy(self.config.app.login_password)
+        login_nome = nome or self.config.app.login_password
+        login_senha = senha or self.config.app.login_password
+
+        if self._tentar_clicar_imagem("input_empresa_login", timeout=20):
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.5)
+            pyperclip.copy(login_nome)
+            keyboard.send_keys("^a")
+            keyboard.send_keys("^v")
+            time.sleep(0.5)
+            self.logger.info("Nome de login preenchido: %s", login_nome)
+        else:
+            self.logger.warning("Campo de nome não encontrado, pulando preenchimento do nome.")
+
+        keyboard.send_keys("{TAB}")
+        time.sleep(0.5)
+        pyperclip.copy(login_senha)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         time.sleep(0.5)
-        self.logger.info("Senha preenchida com sucesso.")
 
     def click_login(self) -> None:
         self.logger.info("Clicando no botão LOGIN por imagem.")
@@ -215,16 +219,23 @@ class AutomotivApp:
             return False
         return self.image.exists(image_name=image_name, timeout=timeout, confidence=self._get_confidence())
 
-    def _tentar_clicar_imagem(self, image_key: str, timeout: int = 5) -> bool:
-        """Clica na imagem se ela aparecer. Retorna True se clicou, False se não encontrou — sem lançar erro."""
+    def _tentar_clicar_imagem(self, image_key: str, timeout: int = 5, max_attempts: int = 3) -> bool:
+        """Clica na imagem se ela aparecer. Tenta até max_attempts vezes antes de desistir."""
         image_name = self._get_image_name(image_key)
         if not image_name:
             self.logger.info("Imagem '%s' não configurada, pulando.", image_key)
             return False
-        clicked = self.image.click(image_name=image_name, timeout=timeout, confidence=self._get_confidence())
-        if not clicked:
-            self.logger.info("Imagem '%s' não encontrada na tela, pulando.", image_key)
-        return clicked
+        for attempt in range(1, max_attempts + 1):
+            clicked = self.image.click(image_name=image_name, timeout=timeout, confidence=self._get_confidence())
+            if clicked:
+                if attempt > 1:
+                    self.logger.info("Imagem '%s' encontrada na tentativa %s/%s.", image_key, attempt, max_attempts)
+                return True
+            if attempt < max_attempts:
+                self.logger.info("Imagem '%s' não encontrada (tentativa %s/%s). Aguardando 1s...", image_key, attempt, max_attempts)
+                time.sleep(1)
+        self.logger.info("Imagem '%s' não encontrada após %s tentativas, pulando.", image_key, max_attempts)
+        return False
 
     def _try_close_dialog(self) -> None:
         self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
@@ -1088,22 +1099,7 @@ class AutomotivApp:
         return float(self.image_config.get("confidence", self.config.images.confidence))
 
     def _load_image_config(self) -> dict[str, Any]:
-        yaml_images: dict[str, Any] = {}
-        config_path = Path("config/config.yaml")
-        try:
-            if config_path.exists():
-                with config_path.open("r", encoding="utf-8") as file:
-                    raw = yaml.safe_load(file) or {}
-                yaml_images = raw.get("images") or {}
-        except Exception as exc:
-            self.logger.warning("Não consegui ler seção images do config.yaml: %s", exc)
-        images = {
-            "assets_dir": getattr(self.config.images, "assets_dir", "assets/images"),
-            "confidence": getattr(self.config.images, "confidence", 0.85),
-            "login_button": getattr(self.config.images, "login_button", "login_button.png"),
-        }
-        images.update(yaml_images)
-        return images
+        return self.config.images.model_dump()
 
     @staticmethod
     def _menu_label_to_image_key(label: str) -> str:

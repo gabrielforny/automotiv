@@ -303,3 +303,38 @@ def read_company_name_from_excel(
         )
     workbook.close()
     return None
+
+def read_login_credentials_from_excel(
+    excel_path: str | Path,
+    config: ExcelConfig,
+) -> tuple[str | None, str | None]:
+    """Lê NOME e SENHA do representante nas linhas de cabeçalho da planilha.
+
+    Retorna (nome, senha). Qualquer campo não encontrado vem como None.
+    """
+    path = Path(excel_path)
+    if not path.exists():
+        return None, None
+
+    workbook = load_workbook(path, data_only=True)
+    sheet = workbook.active
+
+    nome: str | None = None
+    senha: str | None = None
+
+    for row_idx in range(1, config.header_row):
+        row_cells = sheet[row_idx]
+        labels = [_normalize_header(c.value) for c in row_cells]
+
+        for col_idx, label in enumerate(labels):
+            if label == "NOME":
+                val = _to_clean_text(sheet.cell(row=row_idx + 1, column=col_idx + 1).value)
+                if val:
+                    nome = val
+            if "SENHA" in label:
+                val = _to_clean_text(sheet.cell(row=row_idx + 1, column=col_idx + 1).value)
+                if val:
+                    senha = val
+
+    workbook.close()
+    return nome, senha
