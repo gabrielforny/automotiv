@@ -13,6 +13,14 @@ except Exception:
     _CV2_AVAILABLE = False
 
 
+def log_cv2_status(logger) -> None:
+    """Loga se cv2 está disponível ou não. Chame no startup para diagnóstico."""
+    if _CV2_AVAILABLE:
+        logger.info("cv2 (OpenCV) disponível: SIM → matching com confidence ativo (tolerante a variações).")
+    else:
+        logger.info("cv2 (OpenCV) disponível: NAO → matching exato pixel-perfect (pode falhar em outras resolucoes).")
+
+
 class ImageAutomation:
     """Utilitário de automação por imagem usando PyAutoGUI."""
 

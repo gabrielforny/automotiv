@@ -18,6 +18,7 @@ from src.cliente_service import ClienteService
 from src.config import load_config
 from src.desktop_automation import AutomotivApp
 from src.excel_reader import read_budget_items, read_company_name_from_excel, read_login_credentials_from_excel
+from src.image_automation import log_cv2_status
 from src.logger import setup_logger
 from src.material_service import MaterialService
 from src.site_search_service import SiteSearchService
@@ -158,6 +159,17 @@ class AutomotivBotGui(tk.Tk):
             config.runtime.dry_run = False
             base_logger = setup_logger(config.runtime.log_level)
             logger = QueueLogger(self.log_queue, base_logger)
+
+            import sys, platform
+            logger.info("=== DIAGNOSTICO DE AMBIENTE ===")
+            logger.info("Sistema operacional: %s %s", platform.system(), platform.version())
+            logger.info("Resolucao de tela: %s x %s", *__import__('pyautogui').size())
+            logger.info("Python: %s", sys.version)
+            logger.info("Frozen (EXE): %s", getattr(sys, 'frozen', False))
+            log_cv2_status(logger)
+            logger.info("Assets dir: %s", config.images.assets_dir)
+            logger.info("Confidence configurada: %s", config.images.confidence)
+            logger.info("===============================")
 
             excel_path = self._resolve_excel_path()
             history = HistoryManager(config, logger)
