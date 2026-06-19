@@ -225,6 +225,31 @@ class AutomotivApp:
             self.logger.debug("UIA click falhou para '%s': %s", title, exc)
             return False
 
+    def _get_pesquisa_window(self, timeout: int = 8):
+        """Retorna a janela 'Pesquisa' do GRV se estiver aberta, ou None."""
+        desktop = Desktop(backend="uia")
+        try:
+            win = desktop.window(title="Pesquisa", class_name="TFMPesquisa_")
+            win.wait("exists visible", timeout=timeout)
+            return win
+        except Exception:
+            return None
+
+    def _digitar_no_campo_pesquisa(self, text: str) -> bool:
+        """Digita no campo 'Pesquisar:' da janela Pesquisa via UIA. Retorna True se conseguiu."""
+        win = self._get_pesquisa_window()
+        if win is None:
+            return False
+        try:
+            campo = win.child_window(title="Pesquisar:", control_type="Pane").child_window(control_type="Edit")
+            campo.wait("exists enabled visible", timeout=5)
+            campo.set_focus()
+            campo.set_edit_text(text)
+            return True
+        except Exception as exc:
+            self.logger.debug("UIA: falhou ao digitar no campo Pesquisar: %s", exc)
+            return False
+
     def _click_menu_by_control(self, label: str, search_in_popup: bool = False) -> None:
         desktop = Desktop(backend="uia")
         window = desktop.window(title_re=self.config.app.window_title_regex)
@@ -363,6 +388,11 @@ class AutomotivApp:
 
     def _type_search_text(self, text: str) -> None:
         self.logger.info("Digitando texto da pesquisa: %s", text)
+        if self._digitar_no_campo_pesquisa(text):
+            self.logger.info("Texto digitado via UIA no campo Pesquisar.")
+            keyboard.send_keys("{ENTER}")
+            return
+        # Fallback teclado
         keyboard.send_keys("{TAB}")
         time.sleep(0.4)
         keyboard.send_keys("{TAB}")
