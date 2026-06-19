@@ -144,7 +144,11 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
         time.sleep(8)
-        self._tentar_clicar_imagem("menu_orcamento_novo")
+        # UIA: botão 'Novo-F2' na toolbar do Orçamento
+        if not self._clicar_por_uia("Novo-F2", control_type="Button", timeout=5):
+            if not self._tentar_clicar_imagem("menu_orcamento_novo", timeout=5):
+                self.logger.warning("'Novo-F2' não encontrado via UIA nem imagem. Usando F2.")
+                keyboard.send_keys("{F2}")
         time.sleep(2)
         if company_name:
             self.logger.info("Digitando nome do cliente no orçamento: %s", company_name)
@@ -167,7 +171,7 @@ class AutomotivApp:
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
         time.sleep(8)
-        self._tentar_clicar_imagem("search_f5_button", timeout=10)
+        self.press_search_f5()
         time.sleep(5)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
@@ -175,16 +179,30 @@ class AutomotivApp:
         for label in labels:
             image_key = self._menu_label_to_image_key(label)
             image_name = self._get_image_name(image_key)
+            clicked = False
             if image_name:
                 self.logger.info("Clicando menu '%s' por imagem '%s'.", label, image_name)
-                self._tentar_clicar_imagem(image_key, timeout=12)
+                clicked = self._tentar_clicar_imagem(image_key, timeout=12)
                 time.sleep(0.8)
-                submenu_open = True
-                continue
-            self.logger.info("Imagem do menu '%s' não configurada. Tentando por controle Windows.", label)
-            self._click_menu_by_control(label, search_in_popup=submenu_open)
-            time.sleep(0.8)
+            if not clicked:
+                self.logger.info("Imagem do menu '%s' não encontrada. Tentando por controle Windows.", label)
+                try:
+                    self._click_menu_by_control(label, search_in_popup=submenu_open)
+                except Exception as exc:
+                    self.logger.warning("Controle Windows falhou para menu '%s': %s", label, exc)
+                time.sleep(0.8)
             submenu_open = True
+
+    def _get_orcamento_window(self):
+        """Retorna o MDI child do Orçamento (TFMOrcamentoP88) ou None."""
+        try:
+            desktop = Desktop(backend="uia")
+            main = desktop.window(title_re=self.config.app.window_title_regex)
+            win = main.child_window(class_name="TFMOrcamentoP88")
+            win.wait("exists visible", timeout=5)
+            return win
+        except Exception:
+            return None
 
     def _clicar_por_uia(
         self,
@@ -640,6 +658,21 @@ class AutomotivApp:
 
         return self._preencher_dados_e_observacao(carrier_code=carrier_code)
 
+    def _clicar_campo_pesquisa_item_orcamento(self) -> None:
+        """Clica no campo de busca de item dentro do orçamento (TcxFindPanelMRUEdit). UIA → imagem."""
+        win = self._get_orcamento_window()
+        if win:
+            try:
+                field = win.child_window(class_name="TcxFindPanelMRUEdit")
+                field.wait("exists enabled visible", timeout=5)
+                field.click_input()
+                self.logger.info("Campo de busca de item clicado via UIA (TcxFindPanelMRUEdit).")
+                return
+            except Exception as exc:
+                self.logger.debug("UIA: falhou ao clicar campo busca item: %s", exc)
+        if not self._tentar_clicar_imagem("input_pesquisa_item_orcamento", timeout=10):
+            self.logger.warning("Campo de busca de item não encontrado via UIA nem imagem.")
+
     def _clicar_campo_codigo_grade(self) -> None:
         self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=10)
         time.sleep(3)
@@ -914,7 +947,7 @@ class AutomotivApp:
         codes_to_search = list(target_codes)
 
         # Primeira pesquisa: clicar no campo de busca de item
-        self._tentar_clicar_imagem("input_pesquisa_item_orcamento", timeout=10)
+        self._clicar_campo_pesquisa_item_orcamento()
         time.sleep(0.5)
 
         for code_idx, code in enumerate(codes_to_search):
@@ -1041,7 +1074,11 @@ class AutomotivApp:
 
     def gravar_orcamento(self) -> None:
         self.logger.info("Gravando orçamento.")
-        self._tentar_clicar_imagem("botao_gravar_f3", timeout=10)
+        if self._clicar_por_uia("Grava-F3", control_type="Button", timeout=5):
+            self.logger.info("'Grava-F3' clicado via UIA.")
+        elif not self._tentar_clicar_imagem("botao_gravar_f3", timeout=10):
+            self.logger.warning("'Grava-F3' não encontrado via UIA nem imagem. Usando F3.")
+            keyboard.send_keys("{F3}")
         time.sleep(1)
         self._tratar_erro_gravacao(True)
         time.sleep(2)
