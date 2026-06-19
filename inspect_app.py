@@ -77,19 +77,28 @@ def main() -> None:
     desktop = Desktop(backend="uia")
 
     if args.popup:
-        print("Procurando popups/dialogs abertos...")
+        print("Procurando todas as janelas visíveis (exceto a janela principal do GRV)...")
         targets = []
         for win in desktop.windows():
             try:
+                if not win.is_visible():
+                    continue
                 cls = win.class_name()
                 text = win.window_text()
-                if cls in ("#32770", "TForm", "TPanel") or "dialog" in cls.lower():
-                    targets.append(win)
-                    print(f"  Encontrado: [{cls}] {text!r}")
+                rect = win.rectangle()
+                # Ignora a janela principal do GRV
+                import re as _re
+                if _re.search(r"CPS|GRV|AUTOMOTIV", text):
+                    continue
+                # Ignora janelas minúsculas (ícones de bandeja, etc.)
+                if rect.width() < 50 or rect.height() < 50:
+                    continue
+                targets.append(win)
+                print(f"  Encontrado: [{cls}] {text!r} rect=({rect.left},{rect.top},{rect.right},{rect.bottom})")
             except Exception:
                 pass
         if not targets:
-            print("Nenhum popup/dialog encontrado. Tentando a janela principal.")
+            print("Nenhuma janela extra encontrada. Tentando a janela principal.")
     else:
         targets = []
 
