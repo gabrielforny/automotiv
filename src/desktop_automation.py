@@ -343,13 +343,37 @@ class AutomotivApp:
         return False
 
     def _fechar_aba(self, timeout: int = 10) -> None:
-        """Fecha a aba atual. Tenta imagem; fallback: ESC."""
+        """Fecha a aba atual (MDI child). UIA: botão 'Sair-F10' na toolbar."""
+        if self._clicar_por_uia("Sair-F10", control_type="Button", timeout=3):
+            self.logger.info("Aba fechada via UIA ('Sair-F10').")
+            return
         if not self._tentar_clicar_imagem("btn_fechar_aba", timeout=timeout):
             self.logger.info("btn_fechar_aba não encontrado por imagem. Usando ESC.")
             keyboard.send_keys("{ESC}")
 
     def _fechar_janela(self, timeout: int = 10) -> None:
-        """Fecha a janela atual. Tenta imagem; fallback: F10."""
+        """Fecha popup/dialog aberto. UIA: botão '&Cancelar' ou 'Fechar' no popup."""
+        desktop = Desktop(backend="uia")
+        for win in desktop.windows():
+            try:
+                if not win.is_visible():
+                    continue
+                if re.search(r"CPS|GRV|AUTOMOTIV", win.window_text()):
+                    continue
+                rect = win.rectangle()
+                if rect.width() < 50 or rect.height() < 50:
+                    continue
+                for title in ("&Cancelar", "Fechar"):
+                    try:
+                        btn = win.child_window(title=title, control_type="Button")
+                        btn.wait("exists enabled visible", timeout=2)
+                        btn.click_input()
+                        self.logger.info("Popup fechado via UIA (botão '%s').", title)
+                        return
+                    except Exception:
+                        continue
+            except Exception:
+                continue
         if not self._tentar_clicar_imagem("btn_fechar_janela", timeout=timeout):
             self.logger.info("btn_fechar_janela não encontrado por imagem. Usando F10.")
             keyboard.send_keys("{F10}")
@@ -389,12 +413,25 @@ class AutomotivApp:
             self._delete_file_safely(exported_file)
 
     def _select_search_by_code_internal(self) -> None:
+        # A lista "Pesquisar por" é um TcxGridSite (DevExpress) — não expõe linhas via UIA.
+        # Estratégia: clicar no grid para focar, depois HOME para ir ao 1º item (Código Interno).
+        # found_index=1 porque o índice 0 é a grid de resultados (maior, rect y>366).
+        win = self._get_pesquisa_window()
+        if win:
+            try:
+                grid = win.child_window(class_name="TcxGridSite", found_index=1)
+                grid.wait("exists enabled visible", timeout=5)
+                grid.click_input()
+                keyboard.send_keys("{HOME}")
+                self.logger.info("'Código Interno' selecionado via clique no grid + HOME.")
+                return
+            except Exception as exc:
+                self.logger.debug("UIA: falhou ao focar grid Pesquisar por: %s", exc)
         if self._tentar_clicar_imagem("search_by_codigo_interno", timeout=10):
             return
-        self.logger.info("search_by_codigo_interno não encontrado. Usando TAB+HOME+ENTER.")
+        self.logger.info("search_by_codigo_interno não encontrado. Usando TAB+HOME.")
         keyboard.send_keys("{TAB}")
         keyboard.send_keys("{HOME}")
-        keyboard.send_keys("{ENTER}")
 
     def _set_material_status(self) -> None:
         if self._clicar_radio_pesquisa("Ativo"):
@@ -1038,9 +1075,20 @@ class AutomotivApp:
         return code, carrier_code, company_name
 
     def _fechar_confirmacao_exportacao(self) -> None:
-        """Fecha o diálogo de confirmação pós-exportação, mantendo o modal de pesquisa aberto."""
+        """Fecha diálogo de exportação e confirma seleção do cliente via &OK na janela Pesquisa."""
         self._fechar_janela(timeout=5)
         time.sleep(5)
+        win = self._get_pesquisa_window()
+        if win:
+            try:
+                btn = win.child_window(title="&OK", control_type="Button")
+                btn.wait("exists enabled visible", timeout=5)
+                btn.click_input()
+                self.logger.info("Seleção confirmada via UIA ('&OK' na Pesquisa).")
+                time.sleep(0.5)
+                return
+            except Exception as exc:
+                self.logger.debug("UIA: falhou &OK na Pesquisa: %s", exc)
         if not self._tentar_clicar_imagem("btn_ok_exportacao", timeout=5):
             keyboard.send_keys("{ENTER}")
         time.sleep(0.5)
