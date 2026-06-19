@@ -434,8 +434,8 @@ class AutomotivApp:
         keyboard.send_keys("{HOME}")
 
     def _set_material_status(self) -> None:
-        if self._clicar_radio_pesquisa("Ativo"):
-            self.logger.info("Filtro 'Ativo' selecionado via UIA.")
+        if self._clicar_radio_pesquisa("Todos"):
+            self.logger.info("Filtro 'Todos' selecionado via UIA.")
             time.sleep(0.3)
             return
         keyboard.send_keys("{TAB}{TAB}{DOWN}{DOWN}")
@@ -561,17 +561,34 @@ class AutomotivApp:
         workbook = load_workbook(path, data_only=True)
         sheet = workbook.active
         headers = {str(cell.value).strip(): cell.column for cell in sheet[1] if cell.value}
-        code_col = headers.get("*Código Interno")
-        item_col = headers.get("*Item")
-        family_col = headers.get("*Família")
-        group_col = headers.get("*Grupo")
+        self.logger.debug("Colunas no Excel de materiais: %s", list(headers.keys()))
+        code_col = (
+            headers.get("*Código Interno")
+            or headers.get("Código Interno")
+            or headers.get("*Codigo Interno")
+            or headers.get("Codigo Interno")
+        )
+        item_col = headers.get("*Item") or headers.get("Item")
+        family_col = headers.get("*Família") or headers.get("Família") or headers.get("*Familia") or headers.get("Familia")
+        group_col = headers.get("*Grupo") or headers.get("Grupo")
         if not code_col:
-            raise RuntimeError("Coluna '*Código Interno' não encontrada no Excel exportado.")
+            raise RuntimeError(
+                f"Coluna 'Código Interno' não encontrada no Excel exportado. "
+                f"Colunas disponíveis: {list(headers.keys())}"
+            )
 
         expected = str(expected_code).strip()
         for row in range(2, sheet.max_row + 1):
-            code = str(sheet.cell(row=row, column=code_col).value or "").strip()
+            raw = sheet.cell(row=row, column=code_col).value
+            if raw is None:
+                continue
+            # Valores numéricos do Excel chegam como float (ex: 47688952.0) — normaliza para string inteira
+            if isinstance(raw, float) and raw == int(raw):
+                code = str(int(raw))
+            else:
+                code = str(raw).strip()
             if code == expected:
+                workbook.close()
                 return {
                     "row": row,
                     "codigo_interno": code,
@@ -579,6 +596,7 @@ class AutomotivApp:
                     "familia": sheet.cell(row=row, column=family_col).value if family_col else None,
                     "grupo": sheet.cell(row=row, column=group_col).value if group_col else None,
                 }
+        workbook.close()
         return None
 
     # ================================
