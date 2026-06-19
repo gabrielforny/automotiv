@@ -309,9 +309,9 @@ class AutomotivApp:
             self._delete_file_safely(exported_file)
 
     def _select_search_by_code_internal(self) -> None:
-        if self._get_image_name("search_by_codigo_interno"):
-            self._tentar_clicar_imagem("search_by_codigo_interno", timeout=10)
+        if self._tentar_clicar_imagem("search_by_codigo_interno", timeout=10):
             return
+        self.logger.info("search_by_codigo_interno não encontrado. Usando TAB+HOME+ENTER.")
         keyboard.send_keys("{TAB}")
         keyboard.send_keys("{HOME}")
         keyboard.send_keys("{ENTER}")
@@ -334,13 +334,9 @@ class AutomotivApp:
         keyboard.send_keys("{ENTER}")
 
     def _click_search_button(self) -> None:
-        if self._get_image_name("search_button"):
-            try:
-                self._tentar_clicar_imagem("search_button", timeout=5)
-                return
-            except Exception as exc:
-                self.logger.info("Não consegui clicar pesquisar por imagem; usando ENTER: %s", exc)
-        keyboard.send_keys("{ENTER}")
+        if not self._tentar_clicar_imagem("search_button", timeout=5):
+            self.logger.info("search_button não encontrado por imagem. Usando ENTER.")
+            keyboard.send_keys("{ENTER}")
 
     def _export_grid_to_excel(self, expected_code: str, image_key: str = "export_excel_button") -> Path:
         self.logger.info("Exportando resultado da grid para Excel.")
@@ -946,9 +942,7 @@ class AutomotivApp:
         """Fecha o diálogo de confirmação pós-exportação, mantendo o modal de pesquisa aberto."""
         self._fechar_janela(timeout=5)
         time.sleep(5)
-        if self._get_image_name("btn_ok_exportacao"):
-            self._tentar_clicar_imagem("btn_ok_exportacao", timeout=5)
-        else:
+        if not self._tentar_clicar_imagem("btn_ok_exportacao", timeout=5):
             keyboard.send_keys("{ENTER}")
         time.sleep(0.5)
 
@@ -976,12 +970,11 @@ class AutomotivApp:
         time.sleep(0.5)
 
     def _garantir_radio_contendo(self) -> None:
-        if self._get_image_name("radio_contendo"):
-            self._tentar_clicar_imagem("radio_contendo", timeout=5)
+        if self._tentar_clicar_imagem("radio_contendo", timeout=5):
             self.logger.info("Filtro 'Contendo' selecionado.")
             time.sleep(0.3)
         else:
-            self.logger.warning("Imagem 'radio_contendo' não encontrada — verifique se está mapeada. Seguindo sem alterar o filtro.")
+            self.logger.warning("Imagem 'radio_contendo' não encontrada. Seguindo sem alterar o filtro.")
 
     def _garantir_radio_todos(self) -> None:
         """Garante que o filtro 'Todos' está selecionado na tela de pesquisa.
@@ -990,12 +983,11 @@ class AutomotivApp:
         Clicar em 'Todos' quando já está selecionado não tem efeito, então é seguro
         chamar sempre. Se a imagem não for encontrada, apenas loga e segue em frente.
         """
-        if self._get_image_name("radio_todos"):
-            self._tentar_clicar_imagem("radio_todos", timeout=5)
+        if self._tentar_clicar_imagem("radio_todos", timeout=5):
             self.logger.info("Filtro 'Todos' selecionado.")
             time.sleep(0.3)
         else:
-            self.logger.warning("Imagem 'radio_todos' não encontrada — verifique se está mapeada. Seguindo sem alterar o filtro.")
+            self.logger.warning("Imagem 'radio_todos' não encontrada. Seguindo sem alterar o filtro.")
 
     def _extract_first_client_code(self, cpf_or_cnpj: str) -> tuple[str | None, str | None]:
         """Retorna (client_code, company_name) da primeira linha da grid de clientes exportada."""
