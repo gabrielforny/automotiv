@@ -250,6 +250,20 @@ class AutomotivApp:
             self.logger.debug("UIA: falhou ao digitar no campo Pesquisar: %s", exc)
             return False
 
+    def _clicar_radio_pesquisa(self, title: str) -> bool:
+        """Clica num RadioButton pelo título dentro da janela Pesquisa. Retorna True se clicou."""
+        win = self._get_pesquisa_window()
+        if win is None:
+            return False
+        try:
+            radio = win.child_window(title=title, control_type="RadioButton")
+            radio.wait("exists enabled visible", timeout=5)
+            radio.click_input()
+            return True
+        except Exception as exc:
+            self.logger.debug("UIA: falhou ao clicar radio '%s': %s", title, exc)
+            return False
+
     def _click_menu_by_control(self, label: str, search_in_popup: bool = False) -> None:
         desktop = Desktop(backend="uia")
         window = desktop.window(title_re=self.config.app.window_title_regex)
@@ -383,6 +397,10 @@ class AutomotivApp:
         keyboard.send_keys("{ENTER}")
 
     def _set_material_status(self) -> None:
+        if self._clicar_radio_pesquisa("Ativo"):
+            self.logger.info("Filtro 'Ativo' selecionado via UIA.")
+            time.sleep(0.3)
+            return
         keyboard.send_keys("{TAB}{TAB}{DOWN}{DOWN}")
         time.sleep(0.3)
 
@@ -405,6 +423,16 @@ class AutomotivApp:
         keyboard.send_keys("{ENTER}")
 
     def _click_search_button(self) -> None:
+        win = self._get_pesquisa_window()
+        if win:
+            try:
+                btn = win.child_window(title="Pesquisar", control_type="Button")
+                btn.wait("exists enabled visible", timeout=5)
+                btn.click_input()
+                self.logger.info("Botão 'Pesquisar' clicado via UIA.")
+                return
+            except Exception as exc:
+                self.logger.debug("UIA: falhou ao clicar botão 'Pesquisar': %s", exc)
         if not self._tentar_clicar_imagem("search_button", timeout=5):
             self.logger.info("search_button não encontrado por imagem. Usando ENTER.")
             keyboard.send_keys("{ENTER}")
@@ -1041,24 +1069,26 @@ class AutomotivApp:
         time.sleep(0.5)
 
     def _garantir_radio_contendo(self) -> None:
+        if self._clicar_radio_pesquisa("Contendo"):
+            self.logger.info("Filtro 'Contendo' selecionado via UIA.")
+            time.sleep(0.3)
+            return
         if self._tentar_clicar_imagem("radio_contendo", timeout=5):
-            self.logger.info("Filtro 'Contendo' selecionado.")
+            self.logger.info("Filtro 'Contendo' selecionado por imagem.")
             time.sleep(0.3)
         else:
-            self.logger.warning("Imagem 'radio_contendo' não encontrada. Seguindo sem alterar o filtro.")
+            self.logger.warning("Filtro 'Contendo' não encontrado. Seguindo sem alterar o filtro.")
 
     def _garantir_radio_todos(self) -> None:
-        """Garante que o filtro 'Todos' está selecionado na tela de pesquisa.
-
-        O GRV às vezes abre com 'Ativo', às vezes com 'Inativo', às vezes com 'Todos'.
-        Clicar em 'Todos' quando já está selecionado não tem efeito, então é seguro
-        chamar sempre. Se a imagem não for encontrada, apenas loga e segue em frente.
-        """
+        if self._clicar_radio_pesquisa("Todos"):
+            self.logger.info("Filtro 'Todos' selecionado via UIA.")
+            time.sleep(0.3)
+            return
         if self._tentar_clicar_imagem("radio_todos", timeout=5):
-            self.logger.info("Filtro 'Todos' selecionado.")
+            self.logger.info("Filtro 'Todos' selecionado por imagem.")
             time.sleep(0.3)
         else:
-            self.logger.warning("Imagem 'radio_todos' não encontrada. Seguindo sem alterar o filtro.")
+            self.logger.warning("Filtro 'Todos' não encontrado. Seguindo sem alterar o filtro.")
 
     def _extract_first_client_code(self, cpf_or_cnpj: str) -> tuple[str | None, str | None]:
         """Retorna (client_code, company_name) da primeira linha da grid de clientes exportada."""
