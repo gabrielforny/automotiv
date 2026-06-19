@@ -186,6 +186,45 @@ class AutomotivApp:
             time.sleep(0.8)
             submenu_open = True
 
+    def _clicar_por_uia(
+        self,
+        title: str,
+        control_type: str | None = None,
+        timeout: int = 8,
+        search_in_popup: bool = False,
+    ) -> bool:
+        """Clica num controle pelo título UIA. Retorna True se clicou, False se não achou."""
+        desktop = Desktop(backend="uia")
+        try:
+            if search_in_popup:
+                for win in desktop.windows():
+                    try:
+                        if not win.is_visible():
+                            continue
+                        kwargs = {"title": title}
+                        if control_type:
+                            kwargs["control_type"] = control_type
+                        ctrl = win.child_window(**kwargs)
+                        ctrl.wait("exists enabled visible", timeout=timeout)
+                        ctrl.click_input()
+                        return True
+                    except Exception:
+                        continue
+                return False
+
+            window = desktop.window(title_re=self.config.app.window_title_regex)
+            window.set_focus()
+            kwargs = {"title": title, "found_index": 0}
+            if control_type:
+                kwargs["control_type"] = control_type
+            ctrl = window.child_window(**kwargs)
+            ctrl.wait("exists enabled visible", timeout=timeout)
+            ctrl.click_input()
+            return True
+        except Exception as exc:
+            self.logger.debug("UIA click falhou para '%s': %s", title, exc)
+            return False
+
     def _click_menu_by_control(self, label: str, search_in_popup: bool = False) -> None:
         desktop = Desktop(backend="uia")
         window = desktop.window(title_re=self.config.app.window_title_regex)
@@ -212,10 +251,12 @@ class AutomotivApp:
 
     def press_search_f5(self) -> None:
         self.logger.info("Abrindo pesquisa com F5.")
-        if self._tentar_clicar_imagem("search_f5_button", timeout=10):
-            self.logger.info("Clique no botão de pesquisa por imagem realizado com sucesso.")
+        if self._clicar_por_uia("Pesquisa - F5", control_type="Button", timeout=5):
+            self.logger.info("Botão 'Pesquisa - F5' clicado via UIA.")
+        elif self._tentar_clicar_imagem("search_f5_button", timeout=5):
+            self.logger.info("Botão de pesquisa clicado por imagem.")
         else:
-            self.logger.info("search_f5_button não encontrado por imagem. Usando tecla F5.")
+            self.logger.info("Usando tecla F5.")
             keyboard.send_keys("{F5}")
         time.sleep(1)
 
