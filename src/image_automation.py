@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import tempfile
 import time
 from pathlib import Path
 from typing import Optional
@@ -7,10 +8,15 @@ from typing import Optional
 import pyautogui
 
 try:
-    import cv2  # noqa: F401
+    import cv2
+    import numpy as np
     _CV2_AVAILABLE = True
 except Exception:
     _CV2_AVAILABLE = False
+
+# Escalas a tentar quando a escala 1.0 não encontrar a imagem.
+# Cobre DPI 100%→125%→150% do Windows e variações inversas.
+_FALLBACK_SCALES = (0.75, 1.25, 0.875, 1.5, 0.67)
 
 
 def log_cv2_status(logger) -> None:
@@ -19,6 +25,23 @@ def log_cv2_status(logger) -> None:
         logger.info("cv2 (OpenCV) disponível: SIM → matching com confidence ativo (tolerante a variações).")
     else:
         logger.info("cv2 (OpenCV) disponível: NAO → matching exato pixel-perfect (pode falhar em outras resolucoes).")
+
+
+def _resize_image_temp(image_path: Path, scale: float) -> str | None:
+    """Redimensiona a imagem e salva num arquivo temporário. Retorna o path ou None."""
+    if not _CV2_AVAILABLE:
+        return None
+    img = cv2.imread(str(image_path), cv2.IMREAD_UNCHANGED)
+    if img is None:
+        return None
+    h, w = img.shape[:2]
+    new_w, new_h = max(1, int(w * scale)), max(1, int(h * scale))
+    resized = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA if scale < 1 else cv2.INTER_CUBIC)
+    suffix = image_path.suffix or ".png"
+    tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+    cv2.imwrite(tmp.name, resized)
+    tmp.close()
+    return tmp.name
 
 
 class ImageAutomation:
@@ -34,6 +57,24 @@ class ImageAutomation:
         if image_path.is_absolute():
             return image_path
         return self.assets_dir / image_path
+
+    def _try_locate_at_scale(self, image_path: Path, scale: float, confidence: float | None):
+        """Tenta localizar a imagem na escala dada. Retorna center ou None."""
+        import os
+        tmp_path = _resize_image_temp(image_path, scale) if scale != 1.0 else None
+        target = tmp_path or str(image_path)
+        try:
+            kwargs = {"confidence": confidence} if confidence is not None else {}
+            center = pyautogui.locateCenterOnScreen(target, **kwargs)
+            return center
+        except Exception:
+            return None
+        finally:
+            if tmp_path:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
     def locate_center(
         self,
@@ -52,10 +93,21 @@ class ImageAutomation:
 
         while time.time() < deadline:
             try:
-                kwargs = {"confidence": final_confidence} if final_confidence is not None else {}
-                center = pyautogui.locateCenterOnScreen(str(image_path), **kwargs)
+                center = self._try_locate_at_scale(image_path, 1.0, final_confidence)
                 if center:
                     return center
+
+                # Fallback multi-escala: cobre DPI diferente entre máquinas
+                if _CV2_AVAILABLE:
+                    for scale in _FALLBACK_SCALES:
+                        center = self._try_locate_at_scale(image_path, scale, final_confidence)
+                        if center:
+                            if self.logger:
+                                self.logger.debug(
+                                    "Imagem %s encontrada com escala %.2fx (DPI diferente detectado).",
+                                    image_path.name, scale,
+                                )
+                            return center
             except Exception as error:
                 last_error = error
             time.sleep(0.5)
