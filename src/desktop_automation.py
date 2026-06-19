@@ -90,7 +90,35 @@ class AutomotivApp:
         self.logger.info("Abrindo Cadastro > Materiais > Materiais/Itens.")
         if self.config.runtime.dry_run:
             return
-        self._send_menu_sequence(["Cadastro", "Materiais", "Materiais/Itens"])
+
+        # Passo 1: clicar em Cadastro (imagem ou controle Windows)
+        if not self._tentar_clicar_imagem("menu_cadastro", timeout=12):
+            self.logger.info("menu_cadastro não encontrado por imagem. Tentando por controle Windows.")
+            self._click_menu_by_control("Cadastro")
+        time.sleep(0.8)
+
+        # Passo 2: Materiais > Materiais/Itens (imagem ou teclado)
+        if self._tentar_clicar_imagem("menu_materiais", timeout=12):
+            time.sleep(0.8)
+            if not self._tentar_clicar_imagem("menu_materiais_itens", timeout=12):
+                self.logger.info("menu_materiais_itens não encontrado. Usando Down + Enter.")
+                keyboard.send_keys("{DOWN}")
+                time.sleep(0.2)
+                keyboard.send_keys("{ENTER}")
+        else:
+            self.logger.info(
+                "menu_materiais não encontrado por imagem. "
+                "Navegando por teclado: Down×6, Right, Down, Enter."
+            )
+            for _ in range(6):
+                keyboard.send_keys("{DOWN}")
+                time.sleep(0.1)
+            keyboard.send_keys("{RIGHT}")
+            time.sleep(0.4)
+            keyboard.send_keys("{DOWN}")
+            time.sleep(0.2)
+            keyboard.send_keys("{ENTER}")
+
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def open_clients_screen(self) -> None:
@@ -184,14 +212,11 @@ class AutomotivApp:
 
     def press_search_f5(self) -> None:
         self.logger.info("Abrindo pesquisa com F5.")
-        try:
-            self._tentar_clicar_imagem("search_f5_button", timeout=10)
+        if self._tentar_clicar_imagem("search_f5_button", timeout=10):
             self.logger.info("Clique no botão de pesquisa por imagem realizado com sucesso.")
-        except Exception:
-            if self._get_image_name("search_f5_button"):
-                self._tentar_clicar_imagem("search_f5_button", timeout=10)
-            else:
-                keyboard.send_keys("{F5}")
+        else:
+            self.logger.info("search_f5_button não encontrado por imagem. Usando tecla F5.")
+            keyboard.send_keys("{F5}")
         time.sleep(1)
 
     def close_current_screen(self) -> None:
@@ -200,16 +225,16 @@ class AutomotivApp:
             return
         self._try_close_dialog()
         self._try_close_dialog()
-        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
+        self._fechar_aba(timeout=10)
         time.sleep(1)
 
     def fechar_janela_para_buscar_site(self) -> None:
         self.logger.info("Fechando janela atual para liberar foco e buscar no site.")
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        self._fechar_janela(timeout=10)
         time.sleep(3)
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        self._fechar_janela(timeout=10)
         time.sleep(3)
-        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
+        self._fechar_aba(timeout=10)
         time.sleep(3)
 
     def _image_esta_visivel(self, image_key: str, timeout: int = 3) -> bool:
@@ -237,8 +262,20 @@ class AutomotivApp:
         self.logger.info("Imagem '%s' não encontrada após %s tentativas, pulando.", image_key, max_attempts)
         return False
 
+    def _fechar_aba(self, timeout: int = 10) -> None:
+        """Fecha a aba atual. Tenta imagem; fallback: ESC."""
+        if not self._tentar_clicar_imagem("btn_fechar_aba", timeout=timeout):
+            self.logger.info("btn_fechar_aba não encontrado por imagem. Usando ESC.")
+            keyboard.send_keys("{ESC}")
+
+    def _fechar_janela(self, timeout: int = 10) -> None:
+        """Fecha a janela atual. Tenta imagem; fallback: F10."""
+        if not self._tentar_clicar_imagem("btn_fechar_janela", timeout=timeout):
+            self.logger.info("btn_fechar_janela não encontrado por imagem. Usando F10.")
+            keyboard.send_keys("{F10}")
+
     def _try_close_dialog(self) -> None:
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        self._fechar_janela(timeout=10)
         time.sleep(0.8)
         keyboard.send_keys("{ESC}")
         time.sleep(0.8)
@@ -428,7 +465,7 @@ class AutomotivApp:
         if self.config.runtime.dry_run:
             return None
 
-        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
+        self._fechar_aba(timeout=10)
         time.sleep(3)
 
         self.abrir_novo_orcamento(company_name=company_name)
@@ -598,7 +635,7 @@ class AutomotivApp:
         carrier_code: str | None = None
 
         # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        self._fechar_janela(timeout=10)
         time.sleep(1)
 
         for order_idx, (n_orcamento, _) in enumerate(pedidos):
@@ -841,7 +878,7 @@ class AutomotivApp:
 
     def _fechar_tela_pedidos_anteriores(self) -> None:
         self._try_close_dialog()
-        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
+        self._fechar_aba(timeout=10)
         time.sleep(0.8)
 
     def buscar_codigo_transportadora(self, company_code: str | None) -> str | None:
@@ -902,12 +939,12 @@ class AutomotivApp:
         if code:
             self._fechar_confirmacao_exportacao()
             carrier_code = self._ler_codigo_transportadora_aba_padrao()
-        self._tentar_clicar_imagem("btn_fechar_aba", timeout=5)
+        self._fechar_aba(timeout=5)
         return code, carrier_code, company_name
 
     def _fechar_confirmacao_exportacao(self) -> None:
         """Fecha o diálogo de confirmação pós-exportação, mantendo o modal de pesquisa aberto."""
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=5)
+        self._fechar_janela(timeout=5)
         time.sleep(5)
         if self._get_image_name("btn_ok_exportacao"):
             self._tentar_clicar_imagem("btn_ok_exportacao", timeout=5)
@@ -1016,11 +1053,11 @@ class AutomotivApp:
     def close_app(self) -> None:
         """Fecha a janela do GRV para liberar o foco antes de abrir o navegador."""
         self.logger.info("Fechando aplicação GRV.")
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        self._fechar_janela(timeout=10)
         time.sleep(1)
-        self._tentar_clicar_imagem("btn_fechar_janela", timeout=10)
+        self._fechar_janela(timeout=10)
         time.sleep(1)
-        self._tentar_clicar_imagem("btn_fechar_aba", timeout=10)
+        self._fechar_aba(timeout=10)
         time.sleep(3)
         self._tentar_clicar_imagem("btn_sair_grv", timeout=10)
         time.sleep(1)
