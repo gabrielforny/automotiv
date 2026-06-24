@@ -57,17 +57,17 @@ class AutomotivApp:
         time.sleep(self.config.app.wait_after_login_seconds)
 
     def _fill_login_fields(self, nome: str | None = None, senha: str | None = None) -> None:
-        time.sleep(5)
         login_nome = nome or self.config.app.login_password
         login_senha = senha or self.config.app.login_password
 
+        # aguarda + clica no campo empresa em uma única operação (era: sleep(5) + clique)
         if self._tentar_clicar_imagem("input_empresa_login", timeout=20):
             keyboard.send_keys("{TAB}")
-            time.sleep(0.5)
+            time.sleep(0.3)
             pyperclip.copy(login_nome)
             keyboard.send_keys("^a")
             keyboard.send_keys("^v")
-            time.sleep(0.5)
+            time.sleep(0.3)
             self.logger.info("Nome de login preenchido: %s", login_nome)
         else:
             self.logger.warning("Campo de nome não encontrado, pulando preenchimento do nome.")
@@ -143,22 +143,20 @@ class AutomotivApp:
         keyboard.send_keys("{DOWN}")
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
-        time.sleep(8)
-        # UIA: botão 'Novo-F2' na toolbar do Orçamento
-        if not self._clicar_por_uia("Novo-F2", control_type="Button", timeout=5):
+        # timeout=15 cobre o carregamento do MDI child — sem sleep fixo antes
+        if not self._clicar_por_uia("Novo-F2", control_type="Button", timeout=15):
             if not self._tentar_clicar_imagem("menu_orcamento_novo", timeout=5):
                 self.logger.warning("'Novo-F2' não encontrado via UIA nem imagem. Usando F2.")
                 keyboard.send_keys("{F2}")
-        time.sleep(2)
-        if company_name:
-            self.logger.info("Digitando nome do cliente no orçamento: %s", company_name)
-            pyperclip.copy(company_name)
-            keyboard.send_keys("^a")
-            keyboard.send_keys("^v")
-            time.sleep(0.3)
-            keyboard.send_keys("{ENTER}")
-            time.sleep(1)
-        time.sleep(self.config.app.wait_after_open_screen_seconds)
+        # "Grava-F3" só aparece em modo criação — aguarda o formulário estar pronto
+        self._aguardar_controle_uia("Grava-F3", control_type="Button", timeout=12)
+        self.logger.info("Digitando nome do cliente no orçamento: %s", company_name)
+        pyperclip.copy(company_name)
+        keyboard.send_keys("^a")
+        keyboard.send_keys("^v")
+        time.sleep(0.3)
+        keyboard.send_keys("{ENTER}")
+        time.sleep(0.5)
 
     def open_previous_orders_search(self) -> None:
         """Abre Orçamento > Orçamento e clica em Pesquisar."""
@@ -170,9 +168,12 @@ class AutomotivApp:
         keyboard.send_keys("{DOWN}")
         time.sleep(0.4)
         keyboard.send_keys("{ENTER}")
-        time.sleep(8)
-        self.press_search_f5()
-        time.sleep(5)
+        # timeout=15 cobre o carregamento do MDI — sem sleep fixo
+        if not self._clicar_por_uia("Pesquisa - F5", control_type="Button", timeout=15):
+            if not self._tentar_clicar_imagem("search_f5_button", timeout=5):
+                keyboard.send_keys("{F5}")
+        # aguarda janela Pesquisa aparecer
+        self._get_pesquisa_window(timeout=10)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
         submenu_open = False
@@ -203,6 +204,29 @@ class AutomotivApp:
             return win
         except Exception:
             return None
+
+    def _aguardar_controle_uia(
+        self,
+        title: str,
+        control_type: str | None = None,
+        timeout: float = 10.0,
+    ) -> bool:
+        """Aguarda um controle UIA aparecer na janela principal. Substitui time.sleep fixo."""
+        deadline = time.time() + timeout
+        kwargs: dict = {"title": title}
+        if control_type:
+            kwargs["control_type"] = control_type
+        while time.time() < deadline:
+            try:
+                desktop = Desktop(backend="uia")
+                win = desktop.window(title_re=self.config.app.window_title_regex)
+                ctrl = win.child_window(**kwargs)
+                if ctrl.exists() and ctrl.is_visible():
+                    return True
+            except Exception:
+                pass
+            time.sleep(0.15)
+        return False
 
     def _clicar_por_uia(
         self,
@@ -315,7 +339,7 @@ class AutomotivApp:
         else:
             self.logger.info("Usando tecla F5.")
             keyboard.send_keys("{F5}")
-        time.sleep(1)
+        self._get_pesquisa_window(timeout=8)  # aguarda janela aparecer em vez de sleep fixo
 
     def close_current_screen(self) -> None:
         self.logger.info("Fechando tela atual.")
@@ -329,11 +353,11 @@ class AutomotivApp:
     def fechar_janela_para_buscar_site(self) -> None:
         self.logger.info("Fechando janela atual para liberar foco e buscar no site.")
         self._fechar_janela(timeout=10)
-        time.sleep(3)
+        time.sleep(0.5)
         self._fechar_janela(timeout=10)
-        time.sleep(3)
+        time.sleep(0.5)
         self._fechar_aba(timeout=10)
-        time.sleep(3)
+        time.sleep(0.5)
 
     def _image_esta_visivel(self, image_key: str, timeout: int = 3) -> bool:
         """Verifica se a imagem está na tela sem clicar. Retorna True se encontrou, False caso contrário."""
@@ -398,9 +422,9 @@ class AutomotivApp:
 
     def _try_close_dialog(self) -> None:
         self._fechar_janela(timeout=10)
-        time.sleep(0.8)
+        time.sleep(0.3)
         keyboard.send_keys("{ESC}")
-        time.sleep(0.8)
+        time.sleep(0.3)
 
     def search_material(self, code_or_reference: str) -> bool:
         return self.find_material(code_or_reference=code_or_reference) is not None
@@ -409,13 +433,12 @@ class AutomotivApp:
         """Pesquisa material e valida o código exato via Excel exportado da grid."""
         self.press_search_f5()
         self._select_search_by_code_internal()
-        time.sleep(1)
+        time.sleep(0.3)
         self._set_material_status()
-        time.sleep(1)
+        time.sleep(0.3)
         self._type_search_text(code_or_reference)
-        time.sleep(3)
-
-        if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
+        # poll único: retorna assim que "sem dados" aparecer, ou após 5s se houver resultado
+        if self._image_esta_visivel("sem_dados_na_busca", timeout=5):
             self.logger.info("Material %s não encontrado (sem dados na busca).", code_or_reference)
             return None
 
@@ -467,14 +490,14 @@ class AutomotivApp:
             return
         # Fallback teclado
         keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
+        time.sleep(0.3)
         keyboard.send_keys("{TAB}")
-        time.sleep(2)
+        time.sleep(0.3)
         pyperclip.copy(text)
-        time.sleep(2)
+        time.sleep(0.3)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
-        time.sleep(2)
+        time.sleep(0.3)
         keyboard.send_keys("{ENTER}")
 
     def _click_search_button(self) -> None:
@@ -634,13 +657,13 @@ class AutomotivApp:
             return None
 
         self._fechar_aba(timeout=10)
-        time.sleep(3)
+        time.sleep(0.5)
 
         self.abrir_novo_orcamento(company_name=company_name)
+        # abrir_novo_orcamento já aguarda "Grava-F3" via UIA — sem sleep adicional
 
-        time.sleep(5)
         self._clicar_campo_codigo_grade()
-        time.sleep(2)
+        time.sleep(0.5)
 
         total_items = len(items)
         for index, item in enumerate(items, start=1):
@@ -675,14 +698,15 @@ class AutomotivApp:
 
     def _clicar_campo_codigo_grade(self) -> None:
         self._tentar_clicar_imagem("campo_codigo_grade_orcamento", timeout=10)
-        time.sleep(3)
+        # aguarda lupa aparecer em vez de sleep(3) fixo
+        self._image_esta_visivel("lupa_dentro_selecao", timeout=5)
         try:
-            self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=10)
-        except Exception as exc:
-            self._tentar_clicar_imagem("lupa_fora_selecao", timeout=10)
-        time.sleep(2)
+            self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=5)
+        except Exception:
+            self._tentar_clicar_imagem("lupa_fora_selecao", timeout=5)
+        time.sleep(0.5)
         keyboard.send_keys("{ESC}")
-        time.sleep(2)
+        time.sleep(0.5)
         self.logger.warning("Clicado na coluna de código de grade")
 
     def _digitar_codigo_item(self, code: str) -> None:
@@ -695,48 +719,24 @@ class AutomotivApp:
 
     def _digitar_quantidade_item(self, quantity: str) -> None:
         self.logger.warning("Digitando quantidade do item: %s", quantity)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
+        for _ in range(7):
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.15)
         pyperclip.copy(str(quantity))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         keyboard.send_keys("{ENTER}")
-        time.sleep(0.3)
+        time.sleep(0.2)
 
     def _digitar_margem_item(self, margin: str) -> None:
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.4)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
-        time.sleep(0.5)
-        keyboard.send_keys("{TAB}")
+        for _ in range(9):
+            keyboard.send_keys("{TAB}")
+            time.sleep(0.15)
         pyperclip.copy(str(margin))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         keyboard.send_keys("{ENTER}")
-        time.sleep(0.3)
+        time.sleep(0.2)
 
     def _ir_proxima_linha_grade(self, index: int) -> None:
         self.logger.info("Indo para próxima linha do orçamento. Linha atual=%s", index)
@@ -747,28 +747,27 @@ class AutomotivApp:
         self.logger.info("Preenchendo dados finais do orçamento e observação. carrier_code=%r", carrier_code)
 
         self._tentar_clicar_imagem("aba_dados_orcamento", timeout=8)
-        time.sleep(3)
+        time.sleep(1)
         self._tentar_clicar_imagem("icone_obrigatorio", timeout=8)
-        time.sleep(2)
+        time.sleep(0.5)
         pyperclip.copy(self.config.workflow.observation_placeholder)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
-        time.sleep(1)
+        time.sleep(0.3)
         keyboard.send_keys("{ENTER}")
-        time.sleep(2)
+        time.sleep(1)
         self.logger.info("Preenchido campo de dados do orçamento.")
         self._tentar_clicar_imagem("aba_observacao_orcamento", timeout=8)
-        time.sleep(2)
+        time.sleep(1)
         self._tentar_clicar_imagem("icone_obrigatorio", timeout=8)
-        time.sleep(2)
+        time.sleep(0.5)
         observation = self._montar_texto_observacao(carrier_code=carrier_code)
         self.logger.info("Texto da observação a ser preenchida:\n%s", observation)
-        time.sleep(1)
         pyperclip.copy(observation)
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
         self.logger.info("Preenchido campo de observação do orçamento.")
-        time.sleep(1)
+        time.sleep(0.3)
         keyboard.send_keys("{ENTER}")
         return None
 
@@ -797,8 +796,8 @@ class AutomotivApp:
         self.open_previous_orders_search()
         self._filtrar_pedidos_anteriores_por_cliente()
 
-        time.sleep(3)
-        if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
+        # poll único — retorna quando "sem dados" aparecer ou após 5s se houver resultado
+        if self._image_esta_visivel("sem_dados_na_busca", timeout=5):
             self.logger.info("Nenhum pedido anterior para o cliente %s (sem dados na busca).", company_code)
             self._fechar_tela_pedidos_anteriores()
             return {}, None
@@ -819,7 +818,7 @@ class AutomotivApp:
 
         # Fecha a janela de resultados da exportação para voltar ao form de pesquisa
         self._fechar_janela(timeout=10)
-        time.sleep(1)
+        time.sleep(0.3)
 
         for order_idx, (n_orcamento, _) in enumerate(pedidos):
             target_remaining = {c for c in material_items if c not in margins}
@@ -909,37 +908,37 @@ class AutomotivApp:
         if not self._image_esta_visivel("filtrar_por_codigo", timeout=3):
             self.logger.info("filtrar_por_codigo não visível — clicando search_f5_button para voltar ao form.")
             self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
-            time.sleep(0.5)
+            time.sleep(0.3)
             self._tentar_clicar_imagem("search_f5_button", timeout=10)
-            time.sleep(1)
+            time.sleep(0.5)
 
         self._tentar_clicar_imagem("filtrar_por_codigo", timeout=10)
-        time.sleep(1)
+        time.sleep(0.5)
 
         # Passo 2: TAB × 3 para chegar ao campo do N do orçamento
         for _ in range(3):
             keyboard.send_keys("{TAB}")
-            time.sleep(0.2)
+            time.sleep(0.15)
 
         # Passo 3: digitar N do orçamento
         pyperclip.copy(str(n_orcamento))
         keyboard.send_keys("^a")
         keyboard.send_keys("^v")
-        time.sleep(0.5)
+        time.sleep(0.3)
 
         # Passo 4: pesquisar e verificar resultado
         keyboard.send_keys("{ENTER}")
-        time.sleep(3)
-
-        if self._image_esta_visivel("sem_dados_na_busca", timeout=3):
+        # poll único: retorna quando "sem dados" aparecer ou após 6s se houver resultado
+        if self._image_esta_visivel("sem_dados_na_busca", timeout=6):
             self.logger.info("Pedido %s não encontrado na busca. Pulando.", n_orcamento)
             self._tentar_clicar_imagem("search_f5_button", timeout=10)
-            time.sleep(1)
+            time.sleep(0.5)
             return None
 
         # Passo 5: abrir o único resultado com ENTER
         keyboard.send_keys("{ENTER}")
-        time.sleep(3)
+        # aguarda formulário do orçamento carregar — "Grava-F3" indica modo visualização/edição
+        self._aguardar_controle_uia("Grava-F3", control_type="Button", timeout=10)
 
         # Passo 7: pesquisar cada item pelo campo de busca dentro do orçamento
         carrier_found: str | None = None
@@ -948,7 +947,7 @@ class AutomotivApp:
 
         # Primeira pesquisa: clicar no campo de busca de item
         self._clicar_campo_pesquisa_item_orcamento()
-        time.sleep(0.5)
+        time.sleep(0.3)
 
         for code_idx, code in enumerate(codes_to_search):
             if code in margins:
@@ -956,16 +955,16 @@ class AutomotivApp:
                 has_next = any(c not in margins for c in codes_to_search[code_idx + 1:])
                 if has_next:
                     self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
-                    time.sleep(0.5)
+                    time.sleep(0.3)
                 continue
 
             # Campo já está focado (inicial ou pós-limpar)
             pyperclip.copy(code)
             keyboard.send_keys("^a")
             keyboard.send_keys("^v")
-            time.sleep(0.5)
+            time.sleep(0.3)
             keyboard.send_keys("{ENTER}")
-            time.sleep(1.5)
+            time.sleep(0.8)
 
             self.logger.info("Pedido %s | buscando código=%s", n_orcamento, code)
 
@@ -976,18 +975,18 @@ class AutomotivApp:
                 # Clicar na lupa que apareceu
                 if not self._tentar_clicar_imagem("lupa_dentro_selecao", timeout=3):
                     self._tentar_clicar_imagem("lupa_fora_selecao", timeout=3)
-                time.sleep(0.5)
+                time.sleep(0.3)
 
                 # TAB × 17 → ENTER → Ctrl+C para ler Margem de Lucro
                 for _ in range(17):
                     keyboard.send_keys("{TAB}")
                     time.sleep(0.1)
                 keyboard.send_keys("{ENTER}")
-                time.sleep(0.3)
+                time.sleep(0.2)
                 pyperclip.copy(_sentinel)
                 time.sleep(0.1)
                 keyboard.send_keys("^c")
-                time.sleep(0.3)
+                time.sleep(0.2)
                 margin = pyperclip.paste().strip()
 
                 if margin and margin != _sentinel:
@@ -999,14 +998,14 @@ class AutomotivApp:
                 # Ler transportadora (apenas na primeira vez que encontramos um item)
                 if not carrier_found:
                     self._tentar_clicar_imagem("aba_transporte_orcamento", timeout=5)
-                    time.sleep(0.5)
+                    time.sleep(0.3)
                     for _ in range(2):
                         keyboard.send_keys("{TAB}")
-                        time.sleep(0.2)
+                        time.sleep(0.15)
                     pyperclip.copy(_sentinel)
                     time.sleep(0.1)
                     keyboard.send_keys("^c")
-                    time.sleep(0.3)
+                    time.sleep(0.2)
                     carrier_raw = pyperclip.paste().strip()
                     if carrier_raw and carrier_raw != _sentinel:
                         carrier_found = carrier_raw
@@ -1014,7 +1013,7 @@ class AutomotivApp:
 
                     # Voltar para aba Itens
                     self._tentar_clicar_imagem("aba_itens_orcamento", timeout=5)
-                    time.sleep(0.5)
+                    time.sleep(0.3)
             else:
                 self.logger.info("Pedido %s | código=%s: não encontrado neste orçamento.", n_orcamento, code)
 
@@ -1022,24 +1021,24 @@ class AutomotivApp:
             has_next = any(c not in margins for c in codes_to_search[code_idx + 1:])
             if has_next:
                 self._tentar_clicar_imagem("limpar_pesquisa_item_orcamento", timeout=5)
-                time.sleep(0.5)
+                time.sleep(0.3)
                 # Após limpar, o campo já está focado — não precisa clicar em input novamente
 
         # Voltar ao form de pesquisa para a próxima iteração
         self._tentar_clicar_imagem("search_f5_button", timeout=10)
-        time.sleep(1)
+        time.sleep(0.5)
 
         return carrier_found
 
     def _filtrar_pedidos_anteriores_por_cliente(self) -> None:
         self._tentar_clicar_imagem("btn_limpar_filtro_ja_feito", timeout=8)
-        time.sleep(2)
+        time.sleep(1)
         keyboard.send_keys("{ENTER}")
-        time.sleep(2)
+        time.sleep(1)
         self._tentar_clicar_imagem("confirmar_pesquisa_muitos_itens", timeout=8)
-        time.sleep(0.5)
+        time.sleep(0.3)
         self._tentar_clicar_imagem("click_ok_pesquisa_itens", timeout=8)
-        time.sleep(7)
+        time.sleep(4)  # GRV executa query — reduzir mais pode causar export antes de carregar
 
     def _calcular_data_inicio_pesquisa(self) -> str:
         from datetime import date
@@ -1079,17 +1078,17 @@ class AutomotivApp:
         elif not self._tentar_clicar_imagem("botao_gravar_f3", timeout=10):
             self.logger.warning("'Grava-F3' não encontrado via UIA nem imagem. Usando F3.")
             keyboard.send_keys("{F3}")
-        time.sleep(1)
+        time.sleep(0.5)
         self._tratar_erro_gravacao(True)
-        time.sleep(2)
+        time.sleep(1)
 
     def _tratar_erro_gravacao(self, is_gravar: bool) -> None:
         for attempt in range(1, self.config.workflow.save_retry_attempts + 1):
             self.logger.info("Verificando erro de gravação. Tentativa %s", attempt)
             self._tentar_clicar_imagem("save_error_modal_ok_button", timeout=10)
-            time.sleep(3)
+            time.sleep(1)
             self._tentar_clicar_imagem("save_error_modal_ok_button", timeout=10)
-            time.sleep(0.5)
+            time.sleep(0.3)
             if is_gravar:
                 self.logger.info("Tentando gravar novamente após erro.")
                 self.gravar_orcamento()
@@ -1097,9 +1096,9 @@ class AutomotivApp:
     def gerar_pdf_orcamento(self) -> None:
         self.logger.info("Gerando PDF do orçamento.")
         self._send_menu_sequence(["Imprimir", "Imprimir Orçamento Padrão"])
-        time.sleep(2)
+        time.sleep(1)
         self._tratar_erro_gravacao(False)
-        time.sleep(2)
+        time.sleep(1)
         self._tentar_clicar_imagem("print_ok_button", timeout=10)
 
     # ================================
@@ -1120,7 +1119,7 @@ class AutomotivApp:
         self._select_search_by_cpf_cnpj()
         self._garantir_radio_todos()
         self._type_search_text(cpf_or_cnpj)
-        time.sleep(2)
+        time.sleep(1)
         code, company_name = self._extract_first_client_code(cpf_or_cnpj)
         carrier_code = None
         if code:
@@ -1132,21 +1131,21 @@ class AutomotivApp:
     def _fechar_confirmacao_exportacao(self) -> None:
         """Fecha diálogo de exportação e confirma seleção do cliente via &OK na janela Pesquisa."""
         self._fechar_janela(timeout=5)
-        time.sleep(5)
-        win = self._get_pesquisa_window()
+        # aguarda Pesquisa reaparecer em vez de sleep(5) fixo
+        win = self._get_pesquisa_window(timeout=8)
         if win:
             try:
                 btn = win.child_window(title="&OK", control_type="Button")
                 btn.wait("exists enabled visible", timeout=5)
                 btn.click_input()
                 self.logger.info("Seleção confirmada via UIA ('&OK' na Pesquisa).")
-                time.sleep(0.5)
+                time.sleep(0.3)
                 return
             except Exception as exc:
                 self.logger.debug("UIA: falhou &OK na Pesquisa: %s", exc)
         if not self._tentar_clicar_imagem("btn_ok_exportacao", timeout=5):
             keyboard.send_keys("{ENTER}")
-        time.sleep(0.5)
+        time.sleep(0.3)
 
     def _ler_codigo_transportadora_aba_padrao(self) -> str | None:
         """Clica na aba PADRÕES do cadastro do cliente, navega até o campo de transportadora e copia."""
@@ -1250,15 +1249,15 @@ class AutomotivApp:
         """Fecha a janela do GRV para liberar o foco antes de abrir o navegador."""
         self.logger.info("Fechando aplicação GRV.")
         self._fechar_janela(timeout=10)
-        time.sleep(1)
+        time.sleep(0.5)
         self._fechar_janela(timeout=10)
-        time.sleep(1)
+        time.sleep(0.5)
         self._fechar_aba(timeout=10)
-        time.sleep(3)
+        time.sleep(0.5)
         self._tentar_clicar_imagem("btn_sair_grv", timeout=10)
-        time.sleep(1)
+        time.sleep(0.5)
         self._tentar_clicar_imagem("btn_sair_do_sistema", timeout=10)
-        time.sleep(3)
+        time.sleep(1)
         self.app = None
 
     def reopen(self) -> None:
