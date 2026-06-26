@@ -92,33 +92,35 @@ class AutomotivApp:
         if self.config.runtime.dry_run:
             return
 
-        # Passo 1: clicar em Cadastro (imagem ou controle Windows)
-        if not self._tentar_clicar_imagem("menu_cadastro", timeout=12):
-            self.logger.info("menu_cadastro não encontrado por imagem. Tentando por controle Windows.")
+        # UIA primeiro — menus Delphi são MenuItem acessíveis diretamente.
+        # Imagem é fallback: lenta (varre tela inteira + 5 escalas) e frágil por DPI.
+        try:
             self._click_menu_by_control("Cadastro")
-        time.sleep(0.8)
+        except Exception:
+            self.logger.info("UIA falhou para 'Cadastro'. Tentando por imagem.")
+            self._tentar_clicar_imagem("menu_cadastro", timeout=8)
+        time.sleep(0.3)
 
-        # Passo 2: Materiais > Materiais/Itens (imagem ou teclado)
-        if self._tentar_clicar_imagem("menu_materiais", timeout=12):
-            time.sleep(0.8)
-            if not self._tentar_clicar_imagem("menu_materiais_itens", timeout=12):
-                self.logger.info("menu_materiais_itens não encontrado. Usando Down + Enter.")
+        try:
+            self._click_menu_by_control("Materiais", search_in_popup=True)
+        except Exception:
+            self.logger.info("UIA falhou para 'Materiais'. Tentando por imagem.")
+            if not self._tentar_clicar_imagem("menu_materiais", timeout=8):
+                for _ in range(6):
+                    keyboard.send_keys("{DOWN}")
+                    time.sleep(0.1)
+                keyboard.send_keys("{RIGHT}")
+                time.sleep(0.3)
+        time.sleep(0.3)
+
+        try:
+            self._click_menu_by_control("Materiais/Itens", search_in_popup=True, label_re=r"Materiais.{0,3}Itens")
+        except Exception:
+            self.logger.info("UIA falhou para 'Materiais/Itens'. Tentando por imagem.")
+            if not self._tentar_clicar_imagem("menu_materiais_itens", timeout=8):
                 keyboard.send_keys("{DOWN}")
                 time.sleep(0.2)
                 keyboard.send_keys("{ENTER}")
-        else:
-            self.logger.info(
-                "menu_materiais não encontrado por imagem. "
-                "Navegando por teclado: Down×6, Right, Down, Enter."
-            )
-            for _ in range(6):
-                keyboard.send_keys("{DOWN}")
-                time.sleep(0.1)
-            keyboard.send_keys("{RIGHT}")
-            time.sleep(0.4)
-            keyboard.send_keys("{DOWN}")
-            time.sleep(0.2)
-            keyboard.send_keys("{ENTER}")
 
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
@@ -126,12 +128,19 @@ class AutomotivApp:
         self.logger.info("Abrindo Cadastro > Cliente.")
         if self.config.runtime.dry_run:
             return
-        self._send_menu_sequence(["Cadastro"])
-        keyboard.send_keys("{DOWN}")
-        time.sleep(0.4)
-        keyboard.send_keys("{DOWN}")
-        time.sleep(0.4)
-        keyboard.send_keys("{ENTER}")
+        try:
+            self._click_menu_by_control("Cadastro")
+        except Exception:
+            self._send_menu_sequence(["Cadastro"])
+        time.sleep(0.3)
+        try:
+            self._click_menu_by_control("Cliente", search_in_popup=True)
+        except Exception:
+            keyboard.send_keys("{DOWN}")
+            time.sleep(0.3)
+            keyboard.send_keys("{DOWN}")
+            time.sleep(0.3)
+            keyboard.send_keys("{ENTER}")
         time.sleep(self.config.app.wait_after_open_screen_seconds)
 
     def abrir_novo_orcamento(self, company_name: str | None = None) -> None:
@@ -177,22 +186,19 @@ class AutomotivApp:
         self._get_pesquisa_window(timeout=10)
 
     def _send_menu_sequence(self, labels: list[str]) -> None:
+        # UIA primeiro — instantâneo quando o controle existe.
+        # Imagem como fallback: só entra se UIA falhar (DPI incompatível, controle não encontrado).
         submenu_open = False
         for label in labels:
-            image_key = self._menu_label_to_image_key(label)
-            image_name = self._get_image_name(image_key)
-            clicked = False
-            if image_name:
-                self.logger.info("Clicando menu '%s' por imagem '%s'.", label, image_name)
-                clicked = self._tentar_clicar_imagem(image_key, timeout=12)
-                time.sleep(0.8)
-            if not clicked:
-                self.logger.info("Imagem do menu '%s' não encontrada. Tentando por controle Windows.", label)
-                try:
-                    self._click_menu_by_control(label, search_in_popup=submenu_open)
-                except Exception as exc:
-                    self.logger.warning("Controle Windows falhou para menu '%s': %s", label, exc)
-                time.sleep(0.8)
+            try:
+                self._click_menu_by_control(label, search_in_popup=submenu_open)
+                self.logger.info("Menu '%s' clicado via UIA.", label)
+            except Exception:
+                self.logger.info("UIA falhou para menu '%s'. Tentando por imagem.", label)
+                image_key = self._menu_label_to_image_key(label)
+                if not self._tentar_clicar_imagem(image_key, timeout=8):
+                    self.logger.warning("Imagem também falhou para menu '%s'.", label)
+            time.sleep(0.3)
             submenu_open = True
 
     def _get_orcamento_window(self):
@@ -307,28 +313,33 @@ class AutomotivApp:
             self.logger.debug("UIA: falhou ao clicar radio '%s': %s", title, exc)
             return False
 
-    def _click_menu_by_control(self, label: str, search_in_popup: bool = False) -> None:
+    def _click_menu_by_control(self, label: str, search_in_popup: bool = False, label_re: str | None = None) -> None:
+        """Clica num item de menu via UIA. Aceita título exato (label) ou regex (label_re)."""
         desktop = Desktop(backend="uia")
         window = desktop.window(title_re=self.config.app.window_title_regex)
         window.set_focus()
+        kwargs: dict = {"control_type": "MenuItem"}
+        if label_re:
+            kwargs["title_re"] = label_re
+        else:
+            kwargs["title"] = label
         try:
             if search_in_popup:
-                # Após um clique de menu anterior, busca dentro do popup/submenu aberto
                 try:
                     popup = desktop.window(control_type="Menu", visible_only=True)
-                    control = popup.child_window(title=label, control_type="MenuItem")
+                    control = popup.child_window(**kwargs)
                     control.wait("exists enabled visible", timeout=5)
                     control.click_input()
                     return
                 except Exception:
                     pass  # fallback para busca na janela principal
 
-            # Busca na janela toda, usando found_index=0 para evitar ambiguidade
-            control = window.child_window(title=label, control_type="MenuItem", found_index=0)
+            kwargs.setdefault("found_index", 0)
+            control = window.child_window(**kwargs)
             control.wait("exists enabled visible", timeout=8)
             control.click_input()
         except Exception as exc:
-            self.logger.warning("Não consegui clicar no menu '%s' por controle: %s", label, exc)
+            self.logger.warning("Não consegui clicar no menu '%s' por controle: %s", label or label_re, exc)
             raise
 
     def press_search_f5(self) -> None:
