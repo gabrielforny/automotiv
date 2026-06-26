@@ -15,7 +15,7 @@ from openpyxl import load_workbook
 from pywinauto import Application, Desktop, keyboard
 
 from src.config import BotConfig
-from src.image_automation import ImageAutomation
+from src.image_automation import ImageAutomation, log_cv2_status
 from src.windows_tools import find_desktop_shortcut
 
 
@@ -31,6 +31,7 @@ class AutomotivApp:
             confidence=float(self.image_config.get("confidence", config.images.confidence)),
         )
         pyautogui.PAUSE = config.runtime.pause_between_actions_seconds
+        log_cv2_status(logger)
 
     def start(self) -> None:
         shortcut = find_desktop_shortcut(self.config.app.shortcut_name)

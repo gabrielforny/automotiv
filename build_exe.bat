@@ -6,5 +6,6 @@ pyinstaller --noconfirm --clean --windowed --name AutomotivBot ^
   --add-data "assets;assets" ^
   --add-data "data;data" ^
   --collect-all cv2 ^
+  --manifest automotiv.manifest ^
   gui_launcher.py
 pause
