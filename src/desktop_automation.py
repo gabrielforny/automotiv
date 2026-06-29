@@ -406,29 +406,31 @@ class AutomotivApp:
             keyboard.send_keys("{ESC}")
 
     def _fechar_janela(self, timeout: int = 10) -> None:
-        """Fecha popup/dialog aberto. UIA: botão '&Cancelar' ou 'Fechar' no popup."""
+        """Fecha popup/dialog aberto via UIA primeiro, depois imagem (timeout curto), depois F10."""
         desktop = Desktop(backend="uia")
         for win in desktop.windows():
             try:
                 if not win.is_visible():
                     continue
-                if re.search(r"CPS|GRV|AUTOMOTIV", win.window_text()):
+                if re.search(self.config.app.window_title_regex, win.window_text()):
                     continue
                 rect = win.rectangle()
                 if rect.width() < 50 or rect.height() < 50:
                     continue
-                for title in ("&Cancelar", "Fechar"):
+                for btn_title in ("&Cancelar", "Fechar", "Sair-F10", "&Fechar", "Close"):
                     try:
-                        btn = win.child_window(title=title, control_type="Button")
-                        btn.wait("exists enabled visible", timeout=2)
-                        btn.click_input()
-                        self.logger.info("Popup fechado via UIA (botão '%s').", title)
-                        return
+                        btn = win.child_window(title=btn_title, control_type="Button")
+                        if btn.exists() and btn.is_visible():
+                            btn.click_input()
+                            self.logger.info("Janela fechada via UIA (botão '%s').", btn_title)
+                            return
                     except Exception:
                         continue
             except Exception:
                 continue
-        if not self._tentar_clicar_imagem("btn_fechar_janela", timeout=timeout):
+        # Fallback imagem com timeout curto (sem cv2, cada scan demora ~11s)
+        image_timeout = min(timeout, 3)
+        if not self._tentar_clicar_imagem("btn_fechar_janela", timeout=image_timeout):
             self.logger.info("btn_fechar_janela não encontrado por imagem. Usando F10.")
             keyboard.send_keys("{F10}")
 
@@ -1095,15 +1097,58 @@ class AutomotivApp:
         time.sleep(1)
 
     def _tratar_erro_gravacao(self, is_gravar: bool) -> None:
+        """Verifica se apareceu modal de erro de gravação. Só re-grava se o modal foi encontrado."""
         for attempt in range(1, self.config.workflow.save_retry_attempts + 1):
             self.logger.info("Verificando erro de gravação. Tentativa %s", attempt)
-            self._tentar_clicar_imagem("save_error_modal_ok_button", timeout=10)
-            time.sleep(1)
-            self._tentar_clicar_imagem("save_error_modal_ok_button", timeout=10)
-            time.sleep(0.3)
-            if is_gravar:
-                self.logger.info("Tentando gravar novamente após erro.")
-                self.gravar_orcamento()
+            # Tenta dispensar o modal via UIA primeiro (mais rápido que imagem)
+            erro_encontrado = self._dispensar_modal_erro_uia()
+            if not erro_encontrado:
+                # Fallback: tenta por imagem com timeout curto
+                erro_encontrado = self._tentar_clicar_imagem("save_error_modal_ok_button", timeout=3)
+            if erro_encontrado:
+                self.logger.warning("Modal de erro de gravação encontrado e dispensado. Tentativa %s.", attempt)
+                time.sleep(0.5)
+                if is_gravar:
+                    self.logger.info("Re-gravando após erro confirmado.")
+                    if self._clicar_por_uia("Grava-F3", control_type="Button", timeout=5):
+                        self.logger.info("'Grava-F3' clicado novamente via UIA.")
+                    else:
+                        keyboard.send_keys("{F3}")
+                    time.sleep(0.5)
+            else:
+                self.logger.info("Nenhum modal de erro detectado — gravação concluída com sucesso.")
+                return
+
+    def _dispensar_modal_erro_uia(self) -> bool:
+        """Tenta fechar um modal de erro via UIA. Retorna True se encontrou e fechou."""
+        try:
+            desktop = Desktop(backend="uia")
+            for win in desktop.windows():
+                try:
+                    if not win.is_visible():
+                        continue
+                    title = win.window_text()
+                    # Ignora a janela principal do GRV
+                    if re.search(self.config.app.window_title_regex, title):
+                        continue
+                    rect = win.rectangle()
+                    if rect.width() < 50 or rect.height() < 50:
+                        continue
+                    # Tenta clicar em OK ou &OK no modal
+                    for btn_title in ("OK", "&OK", "Ok"):
+                        try:
+                            btn = win.child_window(title=btn_title, control_type="Button")
+                            if btn.exists() and btn.is_visible():
+                                btn.click_input()
+                                self.logger.info("Modal de erro dispensado via UIA (botão '%s').", btn_title)
+                                return True
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return False
 
     def gerar_pdf_orcamento(self) -> None:
         self.logger.info("Gerando PDF do orçamento.")
