@@ -185,6 +185,13 @@ class AutomotivBotGui(tk.Tk):
                 logger.info("Linha %s | Código/Referência: %s | Quantidade: %s", item.row_number, item.code_or_reference, item.quantity)
 
             app = AutomotivApp(config, logger)
+            missing_images = app.find_missing_configured_images()
+            if missing_images:
+                logger.warning("Imagens configuradas sem arquivo: %s", len(missing_images))
+                for image_key, image_name in missing_images[:30]:
+                    logger.warning("Imagem ausente: %s -> %s", image_key, image_name)
+                if len(missing_images) > 30:
+                    logger.warning("Mais %s imagem(ns) ausente(s) omitidas do log.", len(missing_images) - 30)
             app.start()
             app.login(nome=login_nome, senha=login_senha)
 

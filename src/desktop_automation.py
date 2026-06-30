@@ -1358,6 +1358,23 @@ class AutomotivApp:
             raise RuntimeError("Modal apareceu, mas não consegui clicar no botão OK.")
         time.sleep(0.5)
 
+    def configured_image_exists(self, image_key: str) -> bool:
+        image_name = self._get_image_name(image_key)
+        if not image_name:
+            return False
+        return self.image.image_exists_on_disk(image_name)
+
+    def find_missing_configured_images(self) -> list[tuple[str, str]]:
+        missing: list[tuple[str, str]] = []
+        for image_key, image_name in sorted(self.image_config.items()):
+            if image_key in {"assets_dir", "confidence"}:
+                continue
+            if not isinstance(image_name, str) or not image_name.strip():
+                continue
+            if not self.image.image_exists_on_disk(image_name):
+                missing.append((image_key, image_name))
+        return missing
+
     def _click_configured_image_or_fail(self, image_key: str, timeout: int = 10, confidence: float | None = None) -> None:
         image_name = self._get_image_name(image_key)
         if not image_name:

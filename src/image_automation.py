@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import time
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -51,6 +52,7 @@ class ImageAutomation:
         self.assets_dir = Path(assets_dir)
         self.confidence = confidence
         self.logger = logger
+        self._scaled_image_cache: dict[tuple[str, float], str] = {}
 
     def _resolve_image_path(self, image_name: str | Path) -> Path:
         image_path = Path(image_name)
@@ -58,23 +60,44 @@ class ImageAutomation:
             return image_path
         return self.assets_dir / image_path
 
+    def image_exists_on_disk(self, image_name: str | Path) -> bool:
+        return self._resolve_image_path(image_name).exists()
+
+    def _get_scaled_image_path(self, image_path: Path, scale: float) -> str | None:
+        """Retorna uma imagem redimensionada em cache para evitar custo repetido no matching."""
+        if scale == 1.0:
+            return str(image_path)
+        key = (str(image_path.resolve()), scale)
+        cached = self._scaled_image_cache.get(key)
+        if cached and Path(cached).exists():
+            return cached
+        tmp_path = _resize_image_temp(image_path, scale)
+        if tmp_path:
+            self._scaled_image_cache[key] = tmp_path
+        return tmp_path
+
     def _try_locate_at_scale(self, image_path: Path, scale: float, confidence: float | None):
         """Tenta localizar a imagem na escala dada. Retorna center ou None."""
-        import os
-        tmp_path = _resize_image_temp(image_path, scale) if scale != 1.0 else None
-        target = tmp_path or str(image_path)
+        target = self._get_scaled_image_path(image_path, scale)
+        if not target:
+            return None
         try:
             kwargs = {"confidence": confidence} if confidence is not None else {}
             center = pyautogui.locateCenterOnScreen(target, **kwargs)
             return center
         except Exception:
             return None
-        finally:
-            if tmp_path:
-                try:
-                    os.unlink(tmp_path)
-                except OSError:
-                    pass
+
+    def cleanup_cache(self) -> None:
+        for tmp_path in self._scaled_image_cache.values():
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+        self._scaled_image_cache.clear()
+
+    def __del__(self) -> None:
+        self.cleanup_cache()
 
     def locate_center(
         self,

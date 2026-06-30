@@ -61,6 +61,14 @@ class OrcamentoService:
         )
 
         self.app.gravar_orcamento()
-        self.app.gerar_pdf_orcamento()
+        if self.app.config.workflow.generate_pdf:
+            if self.app.configured_image_exists("print_ok_button"):
+                self.app.gerar_pdf_orcamento()
+            else:
+                self.logger.warning(
+                    "PDF habilitado, mas imagem 'print_ok_button' não existe. Pulando geração de PDF para evitar travar."
+                )
+        else:
+            self.logger.info("Geração de PDF desabilitada em workflow.generate_pdf=false.")
 
         return budget_number

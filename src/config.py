@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class AppConfig(BaseModel):
@@ -44,6 +44,8 @@ class RuntimeConfig(BaseModel):
 
 
 class ImagesConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
     assets_dir: str = "assets/images"
     confidence: float = 0.85
 
