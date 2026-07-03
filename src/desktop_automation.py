@@ -58,7 +58,7 @@ class AutomotivApp:
         time.sleep(self.config.app.wait_after_login_seconds)
 
     def _fill_login_fields(self, nome: str | None = None, senha: str | None = None) -> None:
-        login_nome = nome or self.config.app.login_password
+        login_nome = nome or self.config.app.login_username
         login_senha = senha or self.config.app.login_password
 
         # aguarda + clica no campo empresa em uma única operação (era: sleep(5) + clique)
