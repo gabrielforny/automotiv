@@ -1,6 +1,7 @@
 app:
   shortcut_name: "MenuGRV3 - Atalho (3).lnk"
   window_title_regex: ".*(CPS|GRV|AUTOMOTIV).*"
+  login_username: "felipe"
   login_password: "123456"
   wait_after_login_seconds: 15
   wait_after_open_screen_seconds: 5

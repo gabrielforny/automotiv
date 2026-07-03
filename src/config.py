@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class AppConfig(BaseModel):
     shortcut_name: str
     window_title_regex: str
+    login_username: str
     login_password: str
     wait_after_login_seconds: int = 15
     wait_after_open_screen_seconds: int = 5
